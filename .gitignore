@@ -1,0 +1,16 @@
+.rda
+.RData
+.Rhistory
+*.Rproj
+.Rproj.user/
+.Rproj.user
+*.pdf
+*.png
+*.html
+*.rdb
+*cache/*
+rao_workindata/*
+rao_originaldata/*
+*.md
+*.csv
+*.zip
