@@ -1,0 +1,368 @@
+---
+title: "Risk Adjusted Outcomes for Urologic Oncology"
+author: "Anobel Y Odisho, John L Gore"
+date: "`r Sys.Date()`"
+output: 
+  tufterhandout::html_tufte_handout:
+        theme: cosmo
+        css: floating.css
+        toc: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=F)
+```
+<!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
+<style>
+td {
+  padding-left: 3px;
+  padding-right: 3px;
+  }
+</style>
+
+```{r}
+library(reshape2)
+library(stringr)
+library(ggplot2)
+library(ggthemes)
+library(RColorBrewer)
+library(knitr)
+library(stargazer)
+library(DT)
+library(leaflet)
+library(sparkline)
+library(dplyr)
+```
+
+```{r load}
+load("rao_workingdata/dsh.rda")
+load("rao_workingdata/zcta.rda")
+load("rao_workingdata/acs.rda")
+load("rao_workingdata/rural.rda")
+load("rao_workingdata/spatial.rda")
+
+bg <- "#FCFCFA"
+main1 <- "#ca0020"
+acc1 <- "#f4a582"
+main2 <- "#92c5de"
+acc2 <- "#0571b0"
+
+# this function takes arguments x=value, y=number of sig figs, prints mean +/- SD in html
+prettyMeanSD <- function (x,y) {
+  mean <- prettyNum(round(mean(x, na.rm=TRUE),y), big.mark = ",")
+  sd <-  prettyNum(round(sd(x, na.rm=TRUE),y), big.mark = ",")
+  paste(mean, " &plusmn; ",sd,sep="")
+}
+
+prettyMedianIQR <- function (x,y) {
+  median <- prettyNum(round(median(x, na.rm=TRUE),y), big.mark = ",")
+  tiles <- round(quantile(x, c(.25, .75), na.rm=TRUE),y)
+  paste(median, " (",tiles[1], " - ", tiles[2], ")",sep="")
+}
+```
+
+# Data Sources
+* [Area Health Resource File](http://ahrf.hrsa.gov)
+* [Medicare Disproportionate Share Index](https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/AcuteInpatientPPS/Historical-Impact-Files-for-FY-1994-through-Present.html)
+* [Medicare General Hospital Data](https://data.medicare.gov/Hospital-Compare/Hospital-General-Information/xubh-q36u)
+* [American Community Survey - US Census Bureau](https://www.census.gov/programs-surveys/acs/)
+* [Rural Urban Commuting Area Codes: USDA Economic Research Service](http://www.ers.usda.gov/data-products/rural-urban-commuting-area-codes.aspx)
+* [Zip Code/ZCTA Crosswalk](https://www.google.com/#safe=off&q=site%3Audsmapper.org%2Fdocs%20-filetype%3Apdf), [Bureau of Primary Health Care, HRSA, DHHS](http://bphc.hrsa.gov/), [Uniform Data System](http://www.udsmapper.org)
+* [Boundary Shapefiles: US TIGER/Line](https://www.census.gov/geo/maps-data/data/tiger-line.html)
+
+# DSH Descriptive Analyses
+* Total number of hospitals: `r length(unique(dsh$providerid))`
+* Years: `r min(dsh$year)` - `r max(dsh$year)`
+* Beds per hospital
+    + Mean (SD): `r prettyMeanSD(dsh$beds,2)`
+    + Median (IQR): `r prettyMedianIQR(dsh$beds)`
+    + Is the number of beds per hospital normally distributed? Kolmogorov-Smirnov p-value `r format.pval(ks.test(dsh$beds, pnorm, mean(dsh$beds, na.rm=TRUE), sd(dsh$beds, na.rm=TRUE))$p.value, eps=.001) `
+
+```{r beds.histogram}
+ggplot(dsh, aes(x=beds)) + 
+  geom_histogram(aes(y=..density..), fill=main2, color="white") + 
+  stat_function(fun=dnorm, color="indianred4", arg=list(mean=mean(dsh$beds), sd=sd(dsh$beds))) + 
+  geom_density(aes(y=..density..), color=acc2) + 
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank()) + 
+  labs(y="Hospitals (density)", x="Number of Hospital Beds")
+```
+
+
+```{r beds.annual.boxplot}
+ggplot(dsh, aes(dsh$year, beds)) +
+  geom_boxplot(aes(fill=as.factor(dsh$year))) + 
+  geom_smooth(aes(group=1), method="lm", se=F, color="black") + 
+  scale_fill_brewer(palette="RdBu") +
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="Beds per Hospital by Year", x="", y="Number of Beds")
+```
+
+```{r beds.annual.table, results="asis"}
+dsh.t <- dsh %>%
+  group_by(year) %>%
+  dplyr::summarise(
+    Mean = round(mean(beds, na.rm=T),2),
+    SD = round(sd(beds, na.rm=T),2)
+  )
+stargazer(dsh.t, summary = F, type="html", rownames = F)
+```
+
+```{r beds.county.boxplot}
+dsh %>% filter(!is.na(County.Name)) %>%
+ggplot(aes(x=reorder(County.Name, -beds, FUN=median), beds)) +
+  geom_boxplot(aes(fill=as.factor(County.Name)), fill=acc2, color=bg) + 
+  coord_flip()+
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="Beds per Hospital, 2011", x="County", y="Beds per Hospital")
+```
+
+* Average Daily Census per hospital
+    + Mean (SD): `r prettyMeanSD(dsh$adc,2)`
+    + Median (IQR): `r prettyMedianIQR(dsh$adc,2)`
+    + Is the average daily census normally distributed? Kolmogorov-Smirnov p-value `r format.pval(ks.test(dsh$adc, pnorm, mean(dsh$adc, na.rm=TRUE), sd(dsh$adc, na.rm=TRUE))$p.value, eps=.001) `
+
+```{r adc.histogram}
+ggplot(dsh, aes(x=adc)) + 
+  geom_histogram(aes(y=..density..), fill=main2, color="white", binwidth=10) + 
+  stat_function(fun=dnorm, color="indianred4", arg=list(mean=mean(dsh$adc, na.rm=TRUE), sd=sd(dsh$adc, na.rm=TRUE))) +
+  geom_density(aes(y=..density..), color=acc2) +
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank()) + 
+  labs(y="Hospitals (density)", x="Average Daily Census")
+```
+
+```{r adc.annual.boxplot}
+ggplot(dsh, aes(dsh$year, adc)) +
+  geom_boxplot(aes(fill=as.factor(dsh$year))) + 
+  geom_smooth(aes(group=1), method="lm", se=F, color="black") + 
+  scale_fill_brewer(palette="RdBu") +
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="Average Daily Census per Hospital by Year", x="", y="Average Daily Census")
+```
+
+```{r adc.annual.table, results="asis"}
+dsh.t <- dsh %>%
+  group_by(year) %>%
+  dplyr::summarise(
+    Mean = round(mean(adc, na.rm=T),2),
+    SD = round(sd(adc, na.rm=T),2)
+  )
+stargazer(dsh.t, summary = F, type="html", rownames = F)
+```
+
+```{r adc.county.boxplot}
+dsh %>% filter(!is.na(County.Name)) %>%
+ggplot(aes(x=reorder(County.Name, adc, FUN=median), adc)) +
+  geom_boxplot(aes(fill=as.factor(County.Name)), fill=acc2, color=bg) + 
+  coord_flip()+
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="Average Daily Census per Hospital, 2011", x="County", y="Average Daily Census")
+```
+
+* DSH Percentage Distribution
+    + Mean (SD): `r prettyMeanSD(dsh$dsh_pct,2)`%
+    + Median (IQR): `r prettyMedianIQR(dsh$dsh_pct,2)`%
+    + Is the DSH percentage per hospital normally distributed? Kolmogorov-Smirnov p-value `r format.pval(ks.test(dsh$dsh_pct, pnorm, mean(dsh$dsh_pct, na.rm=TRUE), sd(dsh$dsh_pct, na.rm=TRUE))$p.value, eps=.001) `
+
+```{r dsh.histogram}
+ggplot(dsh, aes(x=dsh_pct)) + 
+  geom_histogram(aes(y=..density..), fill=main2, color="white") + 
+  stat_function(fun=dnorm, color="indianred4", arg=list(mean=mean(dsh$dsh_pct), sd=sd(dsh$dsh_pct))) + 
+  geom_density(aes(y=..density..), color=acc2) + 
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank()) + 
+  labs(y="Hospitals (density)", x="Medicare DSH Percentage")
+```
+
+```{r dsh.annual.boxplot}
+ggplot(dsh, aes(dsh$year, dsh_pct)) +
+  geom_boxplot(aes(fill=as.factor(dsh$year))) + 
+  geom_smooth(aes(group=1), method="lm", se=F, color="black") + 
+  scale_fill_brewer(palette="RdBu") +
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="DSH per hospital by year", x="", y="DSH")
+```
+
+```{r dsh.annual.table, results="asis"}
+dsh.t <- dsh %>%
+  group_by(year) %>%
+  dplyr::summarise(
+    Mean = round(mean(dsh_pct, na.rm=T),2),
+    SD = round(sd(dsh_pct, na.rm=T),2)
+  )
+stargazer(dsh.t, summary = F, type="html", rownames = F)
+```
+
+```{r dsh.county.boxplot}
+dsh %>% filter(!is.na(County.Name)) %>%
+ggplot(aes(x=reorder(County.Name, -dsh_pct, FUN=median), dsh_pct)) +
+  geom_boxplot(aes(fill=as.factor(County.Name)), fill=acc2, color=bg) + 
+  coord_flip()+
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="DSH Index per Hospital by County, 2011", x="County", y="DSH %")
+```
+
+* Medicare Percentage Distribution
+    + Mean (SD): `r prettyMeanSD(dsh$mcr_pct,2)`%
+    + Median (IQR): `r prettyMedianIQR(dsh$mcr_pct,2)`%
+    + Is the DSH percentage per hospital normally distributed? Kolmogorov-Smirnov p-value `r format.pval(ks.test(dsh$mcr_pct, pnorm, mean(dsh$mcr_pct, na.rm=TRUE), sd(dsh$mcr_pct, na.rm=TRUE))$p.value, eps=.001) `
+
+```{r mcr.histogram}
+ggplot(dsh, aes(x=mcr_pct)) + 
+  geom_histogram(aes(y=..density..), fill=main2, color="white") + 
+  stat_function(fun=dnorm, color="indianred4", arg=list(mean=mean(dsh$mcr_pct, na.rm=TRUE), sd=sd(dsh$mcr_pct, na.rm=TRUE))) + 
+  geom_density(aes(y=..density..), color=acc2) + 
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank()) + 
+  labs(y="Hospitals (density)", x="Medicare Patient Percentage")
+```
+
+```{r mcr_pct.annual.boxplot}
+ggplot(dsh, aes(dsh$year, mcr_pct)) +
+  geom_boxplot(aes(fill=as.factor(dsh$year))) + 
+  geom_smooth(aes(group=1), method="lm", se=F, color="black") + 
+  scale_fill_brewer(palette="RdBu") +
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="% of Medicare Patients per hospital by year", x="", y="Medicare Percentage")
+```
+
+```{r mcr_pct.annual.table, results="asis"}
+dsh.t <- dsh %>%
+  group_by(year) %>%
+  dplyr::summarise(
+    Mean = round(mean(mcr_pct, na.rm=T),2),
+    SD = round(sd(mcr_pct, na.rm=T),2)
+  )
+stargazer(dsh.t, summary = F, type="html", rownames = F)
+```
+
+```{r mcr_pct.county.boxplot}
+dsh %>% filter(!is.na(County.Name)) %>%
+ggplot(aes(x=reorder(County.Name, mcr_pct, FUN=median), mcr_pct)) +
+  geom_boxplot(aes(fill=as.factor(County.Name)), fill=acc2, color=bg) + 
+  coord_flip()+
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="% Medicare Patientsper Hospital by County", x="County", y="% Medicare Patients")
+```
+
+* Case Mix Index Adjustment
+    + Mean (SD): `r prettyMeanSD(dsh$cmi,2)`%
+    + Median (IQR): `r prettyMedianIQR(dsh$cmi,2)`%
+    + Is the DSH percentage per hospital normally distributed? Kolmogorov-Smirnov p-value `r format.pval(ks.test(dsh$cmi, pnorm, mean(dsh$cmi, na.rm=TRUE), sd(dsh$cmi, na.rm=TRUE))$p.value, eps=.001) `
+
+```{r cmi.histogram}
+ggplot(dsh, aes(x=cmi)) + 
+  geom_histogram(aes(y=..density..), fill=main2, color="white") + 
+  stat_function(fun=dnorm, color="indianred4", arg=list(mean=mean(dsh$cmi, na.rm=TRUE), sd=sd(dsh$cmi, na.rm=TRUE))) + 
+  geom_density(aes(y=..density..), color=acc2) + 
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank()) + 
+  labs(y="Hospitals (density)", x="Case Mix Index")
+```
+
+```{r cmi.annual.boxplot}
+ggplot(dsh, aes(dsh$year, cmi)) +
+  geom_boxplot(aes(fill=as.factor(dsh$year))) + 
+  geom_smooth(aes(group=1), method="lm", se=F, color="black") + 
+  scale_fill_brewer(palette="RdBu") +
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="Case Mix Index by Year", x="", y="Case Mix Index")
+```
+
+```{r cmi.annual.table, results="asis"}
+dsh.t <- dsh %>%
+  group_by(year) %>%
+  dplyr::summarise(
+    Mean = round(mean(cmi, na.rm=T),2),
+    SD = round(sd(cmi, na.rm=T),2)
+  )
+
+stargazer(dsh.t, summary = F, type="html", rownames = F)
+```
+
+```{r cmi.county.boxplot}
+dsh %>% filter(!is.na(County.Name)) %>%
+ggplot(aes(x=reorder(County.Name, -cmi, FUN=median), cmi)) +
+  geom_boxplot(aes(fill=as.factor(County.Name)), fill=acc2, color=bg) + 
+  coord_flip()+
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.position="none") +
+  labs(title="Case Mix Index by County", x="County", y="Case Mix Index")
+```
+
+# Map of CA Hospitals
+Represents map of hospitals, based on Medicare DSH data and Medicare Hospital Info  
+Select individual points for more details.
+```{r hospital.map, cache=F}
+dsh2011 <- filter(dsh, year=="2011")
+
+popup <- data.frame(
+  title=paste("<b>",str_to_title(dsh2011$name),"</b>"),
+  beds = paste("Beds:", dsh2011$beds),
+  adc = paste("Average Daily Census:", dsh2011$adc),
+  dsh_pct = paste("Medicare DSH:", round(dsh2011$dsh_pct,2), "%"),
+  mcr_pct = paste("Medicare Patients:", round(dsh2011$mcr_pct,2), "%")
+)
+popup <- apply(popup, 1, FUN=paste, collapse="</br>")
+
+m <-  leaflet(dsh2011) %>%
+  addTiles('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png') %>%
+    addCircleMarkers(lat=dsh2011$lat, lng=dsh2011$lon, color=main1,clusterOptions = markerClusterOptions(), popup=popup)
+
+m
+```
+
+# RUCA Codes
+RUCA Code | Description
+----------|------------
+1|Metropolitan area core: primary flow within an urbanized area (UA)
+2|Metropolitan area high commuting: primary flow 30% or more to a UA
+3|Metropolitan area low commuting: primary flow 10% to 30% to a UA
+4|Micropolitan area core: primary flow within an Urban Cluster of 10,000 to 49,999 (large UC)
+5|Micropolitan high commuting: primary flow 30% or more to a large UC
+6|Micropolitan low commuting: primary flow 10% to 30% to a large UC
+7|Small town core: primary flow within an Urban Cluster of 2,500 to 9,999 (small UC)
+8|Small town high commuting: primary flow 30% or more to a small UC
+9|Small town low commuting: primary flow 10% to 30% to a small UC
+10|Rural areas: primary flow to a tract outside a UA or UC
+
+``` {r ruca.hist, cache=FALSE}
+ggplot(ru, aes(x=ruca)) + 
+  geom_histogram(fill=main2, color="white", binwidth=1, origin = -0.5) + 
+  scale_x_continuous(breaks=1:10) +
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank()) + 
+  labs(y="Number of ZCTAs", x="RUCA")
+```
+
+# ACS Data
+``` {r acs.map, cache=FALSE, fig.height=16}
+maps$overall
+```
+
+# MD Distribution
+``` {r allmddistribution, cache=FALSE, fig.height=16}
+maps$density
+```
+
+# Neighborhood Z-Scores
+``` {r z.scores.hist}
+ggplot(acsz, aes(x=hoodzscore)) + 
+  geom_histogram(aes(y=..density..), fill=main2, color="white") + 
+  stat_function(fun=dnorm, color="indianred4", arg=list(mean=mean(acsz$hoodzscore, na.rm=T), sd=sd(acsz$hoodzscore, na.rm=T))) + 
+  geom_density(aes(y=..density..), color=acc2) + 
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank()) + 
+  labs(y="ZCTAs", x="Diez-Roux Neighborhood Z-Score")
+```
+

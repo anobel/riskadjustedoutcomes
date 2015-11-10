@@ -1,0 +1,54 @@
+---
+title: "The Impact of Clinical and Demographic Factors on Risk-Adjusted Outcomes for Urologic Cancer Surgery"
+author: "Anobel Y. Odisho"
+date: "`r Sys.Date()`"
+output: 
+  tufterhandout::html_tufte_handout:
+        theme: cosmo
+---
+### Please enter your password to review results
+<br>
+
+<!-- start GateKeeper code -->
+<!-- http://www.HTMLisEasy.com/keeper/ -->
+<form name="keeper" action="javascript:location.href =
+window.document.keeper.page.value + '.html'" style="margin:0;">
+<div style="display:inline;">
+<input type="password" name="page">
+<input type="submit" value="Go">
+<noscript><div style="display:inline;color:#ff0000;
+background-color:#ffff66; font:normal 11px tahoma,sans-serif;">
+<br>Javascript is required to access this<br>area. Yours seems
+to be disabled.</div></noscript></div></form>
+<!-- end GateKeeper code -->
+
+# Update History
+### 9/1/2015
+* generate ICE variables
+
+### 8/26/2015
+* Rural/Urban Commuting Area (RUCA) codes imported, matched to ZCTA
+* ACS data import: Gini, Ethnicity
+
+### 8/25/2015
+* ACS data import, prep: median income, capital income, home value, education levels, employment
+* Diez-Roux neighborhood scores calculated
+
+### 8/20/2015
+* Zip code/ZCTA crosswalk imported, prepped
+
+### 8/19/2015
+* completed hospital geocoding
+* created interactive map of hospitals in CA with data in tooltips
+* completed annual and per county descriptions of baseline DSH data
+
+### 8/18/2015
+* Collected addresses for missing/closed hospitals, merged with DSH data
+* baseline analyses of DSH data
+
+### 8/12/2015
+* Medicare DSH and descriptive hospital data cleaned, merged
+
+### 8/11/2015
+* identified and imported descriptive Medicare Hospital Data
+* imported Medicare Disproportionate Share Index Data
