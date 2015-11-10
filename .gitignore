@@ -7,10 +7,14 @@
 *.pdf
 *.png
 *.html
+*.css
+*.js
+*.xlsx
 *.rdb
 *cache/*
-rao_workindata/*
-rao_originaldata/*
 *.md
 *.csv
 *.zip
+rao_workingdata/*
+rao_originaldata/*
+RAOPresentation/*
