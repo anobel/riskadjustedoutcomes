@@ -62,6 +62,9 @@ pt$disp <- factor(pt$disp, levels=0:13, labels=c("Invalid", "Home", "Acute Care"
 pt <- pt %>% filter(disp!="Invalid")
 
 ### Demographics
+# Sex
+pt$sex <- factor(pt$sex, levels=1:4, labels=c("Male", "Female", "Other", "Unknown"))
+
 # Ethnicity (Self-Report)
 pt$ethncty <- factor(pt$ethncty, levels=0:3, labels=c("Invalid", "Hispanic", "Non-Hispanic", "Unknown"))
 
@@ -71,8 +74,9 @@ pt$race <- factor(pt$race, levels=0:6, labels=c("Invalid", "White", "Black", "Na
 # Race normalized to include Hispanic ethnicity per OSHPH
 pt$race_grp <- factor(pt$race_grp, levels=0:5, labels = c("Unknown", "White", "Black", "Hispanic", "AsianPI", "NativeAm"))
 
-# Sex
-pt$sex <- factor(pt$sex, levels=1:4, labels=c("Male", "Female", "Other", "Unknown"))
+# Language
+# Drop two primary language fields: write in and ID, just keep the abbreviation field
+pt <- pt %>% select(-pls_id, -pls_wrtin)
 
 
 # Hospital County (NOT coded as FIPS codes, jsut numerically 1:58)
@@ -198,6 +202,9 @@ msdrg <- msdrg %>%
   
 # merge based on DRG and DRG year
 pt <- pt %>% left_join(msdrg)
+
+# Clean up environment
+rm(msdrg)
 
 
 ##################
