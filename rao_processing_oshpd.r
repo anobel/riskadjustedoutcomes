@@ -20,7 +20,7 @@ library(icd9)
 ##################
 
 # Import OSHPD data into a list of dataframes
-pt <- apply(data.frame(paste("rao_originaldata/oshpd/",list.files("rao_originaldata/oshpd/"),sep="")), 1, FUN=read.csv, header=TRUE, stringsAsFactors=TRUE)
+pt <- apply(data.frame(paste("rao_originaldata/oshpd/",list.files("rao_originaldata/oshpd/"),sep="")), 1, FUN=read.csv, na.strings=c(""), header=TRUE, stringsAsFactors=TRUE)
 
 # row binds all the dataframes in the list into one frame. rbind.fill from plyr
 pt <- do.call(rbind.fill, pt)
@@ -30,8 +30,9 @@ pt <- pt[,sort(colnames(pt))]
 
 # make a smaller subset to make it easier to work with (random sample of 100k rows)
 # In future, can just remove this line for full analysis
-# pt <- droplevels(pt[sample(1:nrow(pt), 10^5, replace=F),])
-
+pt <- droplevels(pt[sample(1:nrow(pt), 10^4, replace=F),])
+# save(pt, file="rao_workingdata/pt.rdata")
+# load(file="rao_workingdata/pt.rdata")
 
 ##################
 #### Data Cleaning
@@ -206,10 +207,56 @@ pt <- pt %>% left_join(msdrg)
 # Clean up environment
 rm(msdrg)
 
+# create visitId variable (combining RLN and admission date) for assigning Elixhauser codes
+pt$visitId = paste(pt$rln, pt$admtdate, sep="_")
 
 ##################
 #### Clean ICD-9s
 ##################
 
-# Fields to address
 # diag_p, odiag1:24, proc_p, oproc1:20
+
+# create vector listing just the fields with diagnosis codes
+diags <- c("diag_p", paste("odiag",1:24,sep=""))
+
+# calculate the total number of listed ICD9 diagnoses per patient
+pt$totaldiags <- apply(pt[,diags], 1, function(x) sum(!is.na(x)))
+
+# to get listing of ICD9 descriptions for each patient
+# apply(pt[1,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
+
+#####
+# Assign Elixhauser Comorbidity 
+
+# Subset visitId and all of the diagnoses fields
+elix <- pt[,c("visitId", diags)]
+
+# Need to convert ICD9 fields from factor to character, add visitID back
+elix <- as.data.frame(lapply(elix[,diags], as.character), stringsAsFactors = F)
+elix <- cbind(visitId = pt$visitId, elix)
+
+# convert from wide to long data, which is necessary for icd9ComorbidElix()
+# using visitId as key variable
+elix <- elix %>% gather(visitId, na.rm=T)
+
+# rename columns
+colnames(elix) <- c("visitId", "diag", "icd9")
+
+
+# based on ICD9s for each patient/admission, make matrix of all 30 Elixhauser categories (T/F)
+elix <- as.data.frame(icd9ComorbidElix(elix, visitId="visitId", icd9Field="icd9"))
+
+# add visitId as index and drop rownames
+elix$visitId <- rownames(elix)
+row.names(elix) <- NULL
+
+# Sum the total number of positive Elixhauser categories per patient, add at end of DF)
+elix <- cbind(elix, elixsum = rowSums(elix[-length(elix)]))
+
+# Merge with main data
+pt <- left_join(pt, elix)
+
+# Clean Up Environment
+rm(elix)
+
+
