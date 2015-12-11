@@ -32,7 +32,7 @@ pt <- pt[,sort(colnames(pt))]
 # In future, can just remove this line for full analysis
 pt <- droplevels(pt[sample(1:nrow(pt), 10^4, replace=F),])
 # save(pt, file="rao_workingdata/pt.rdata")
-# load(file="rao_workingdata/pt.rdata")
+load(file="rao_workingdata/pt.rdata")
 
 ##################
 #### Data Cleaning
@@ -218,32 +218,59 @@ pt$visitId = paste(pt$rln, pt$admtdate, sep="_")
 
 # create vector listing just the fields with diagnosis codes
 diags <- c("diag_p", paste("odiag",1:24,sep=""))
+odiags <- c(paste("odiag",1:24,sep=""))
+opoas <- c(paste("opoa",1:24,sep=""))
 
-# calculate the total number of listed ICD9 diagnoses per patient
+# Calculate the total number of listed ICD9 diagnoses per patient
 pt$totaldiags <- apply(pt[,diags], 1, function(x) sum(!is.na(x)))
-
-# to get listing of ICD9 descriptions for each patient
-# apply(pt[1,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
 
 #####
 # Assign Elixhauser Comorbidity 
 
-# Subset visitId and all of the diagnoses fields
-elix <- pt[,c("visitId", diags)]
+# Subset the "Other Diagnoses" (everything except the principal diagnosis), and their corresponding POA fields
+elix <- pt[,c(odiags, opoas)]
 
-# Need to convert ICD9 fields from factor to character, add visitID back
-elix <- as.data.frame(lapply(elix[,diags], as.character), stringsAsFactors = F)
+# Convert factors to characters, combine with visitIds 
+elix <- as.data.frame(lapply(elix, as.character), stringsAsFactors = F)
 elix <- cbind(visitId = pt$visitId, elix)
 
-# convert from wide to long data, which is necessary for icd9ComorbidElix()
-# using visitId as key variable
-elix <- elix %>% gather(visitId, na.rm=T)
+# Need to drop all "Other Diagnoses" that were NOT Present on Admission
+# Convert from wide to long format, identify and drop all diagnoses that were not present on admission
+# Then add principal diagnosis and calculate Elixhauser before merging with main data
 
-# rename columns
-colnames(elix) <- c("visitId", "diag", "icd9")
+# Convert wide to long and rename columns
+elix <- gather(elix, visitId, value)
+colnames(elix) <- c("visitId", "var", "value")
 
+# Split the odiag1-24 and opoa1-24 columns into two so that I can identify the number associated with opoa==no
+elix <- elix %>%
+  extract(var, c('diag', 'number'), 
+          '([a-z]+)([0-9]+)') %>%
+  arrange(visitId, number)
 
-# based on ICD9s for each patient/admission, make matrix of all 30 Elixhauser categories (T/F)
+# Made a DF of just the visitId and numbers associated with diagnoses NOT Present on Admission
+temp <- elix[elix$value=="No",c("visitId","number")]
+
+# drop NAs
+temp <- temp[!is.na(temp$number),]
+# Assign a flag for drops
+temp$drop <- TRUE
+
+# Merge working list of ICD9s with temp DF to identify rows to drop, drop them, and simplify DF, prep for icd9ComorbidElix()
+elix <- elix %>%
+  left_join(temp) %>%
+  filter(is.na(drop)) %>%
+  filter(diag=="odiag") %>%
+  select(visitId, icd9=value) %>%
+  filter(!is.na(icd9))
+
+# diag_p: bring in primary diagnoses
+diag_p <- pt[,c("visitId", "diag_p")]
+colnames(diag_p) <- c("visitId", "icd9")
+elix <- rbind(elix, diag_p)
+
+# based on ICD9s for each patient/admission, excluding ICDs NOT Present on Admission,
+# make matrix of all 30 Elixhauser categories (T/F)
 elix <- as.data.frame(icd9ComorbidElix(elix, visitId="visitId", icd9Field="icd9"))
 
 # add visitId as index and drop rownames
@@ -257,6 +284,7 @@ elix <- cbind(elix, elixsum = rowSums(elix[-length(elix)]))
 pt <- left_join(pt, elix)
 
 # Clean Up Environment
-rm(elix)
+rm(elix, diags, odiags, opoas)
 
-
+# to get listing of ICD9 descriptions for each patient
+# apply(pt[1,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
