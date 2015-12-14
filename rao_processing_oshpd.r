@@ -30,9 +30,7 @@ pt <- pt[,sort(colnames(pt))]
 
 # make a smaller subset to make it easier to work with (random sample of 100k rows)
 # In future, can just remove this line for full analysis
-pt <- droplevels(pt[sample(1:nrow(pt), 10^4, replace=F),])
-# save(pt, file="rao_workingdata/pt.rdata")
-load(file="rao_workingdata/pt.rdata")
+# pt <- droplevels(pt[sample(1:nrow(pt), 10^4, replace=F),])
 
 ##################
 #### Data Cleaning
@@ -163,7 +161,7 @@ payers <- payers %>%
   filter(min_rank(plan_name)==1) %>%
   unique() %>%
   ungroup()
-  
+
 # merge with main data 
 pt <- pt %>% left_join(payers, by = c("pay_plan" = "plan_code"))
 
@@ -200,7 +198,7 @@ msdrg$msdrg_name <- str_to_title(msdrg$msdrg_name)
 msdrg <- msdrg %>%
   group_by(msdrg_year, msdrg) %>%
   distinct()
-  
+
 # merge based on DRG and DRG year
 pt <- pt %>% left_join(msdrg)
 
@@ -210,11 +208,14 @@ rm(msdrg)
 # create visitId variable (combining RLN and admission date) for assigning Elixhauser codes
 pt$visitId = paste(pt$rln, pt$admtdate, sep="_")
 
-##################
-#### Clean ICD-9s
-##################
 
-# diag_p, odiag1:24, proc_p, oproc1:20
+#### Checkpoint 
+# save(pt, file="rao_workingdata/pt.rda")
+# rm(pt)
+
+###################################
+#### Assign Elixhauser Comorbidity
+###################################
 
 # create vector listing just the fields with diagnosis codes
 diags <- c("diag_p", paste("odiag",1:24,sep=""))
@@ -223,9 +224,6 @@ opoas <- c(paste("opoa",1:24,sep=""))
 
 # Calculate the total number of listed ICD9 diagnoses per patient
 pt$totaldiags <- apply(pt[,diags], 1, function(x) sum(!is.na(x)))
-
-#####
-# Assign Elixhauser Comorbidity 
 
 # Subset the "Other Diagnoses" (everything except the principal diagnosis), and their corresponding POA fields
 elix <- pt[,c(odiags, opoas)]
@@ -239,14 +237,20 @@ elix <- cbind(visitId = pt$visitId, elix)
 # Then add principal diagnosis and calculate Elixhauser before merging with main data
 
 # Convert wide to long and rename columns
-elix <- gather(elix, visitId, value)
+elix <- gather(elix, visitId, value, na.rm=T)
 colnames(elix) <- c("visitId", "var", "value")
+elix$value <- factor(elix$value)
 
 # Split the odiag1-24 and opoa1-24 columns into two so that I can identify the number associated with opoa==no
+colsplit <- rbind(data.frame(var=paste("odiag",1:24, sep=""), var="odiag", number=1:24), data.frame(var=paste("opoa",1:24, sep=""), var="opoa", number=1:24))
+
+# Join elix data with split column names
 elix <- elix %>%
-  extract(var, c('diag', 'number'), 
-          '([a-z]+)([0-9]+)') %>%
-  arrange(visitId, number)
+  left_join(colsplit) %>%
+  select(-var) %>%
+  rename(var = var.1)
+
+rm(colsplit)
 
 # Made a DF of just the visitId and numbers associated with diagnoses NOT Present on Admission
 temp <- elix[elix$value=="No",c("visitId","number")]
@@ -256,21 +260,35 @@ temp <- temp[!is.na(temp$number),]
 # Assign a flag for drops
 temp$drop <- TRUE
 
+### Checkpoint
+# setwd("/Users/anobel/Documents/code/rao/")
+# save(elix, temp, file="rao_workingdata/elix.rda")
+load(file="rao_workingdata/elix.rda")
+
 # Merge working list of ICD9s with temp DF to identify rows to drop, drop them, and simplify DF, prep for icd9ComorbidElix()
 elix <- elix %>%
   left_join(temp) %>%
   filter(is.na(drop)) %>%
-  filter(diag=="odiag") %>%
+  filter(var=="odiag") %>%
   select(visitId, icd9=value) %>%
   filter(!is.na(icd9))
 
+rm(temp)
+
 # diag_p: bring in primary diagnoses
+load(file="rao_workingdata/pt.rda")
 diag_p <- pt[,c("visitId", "diag_p")]
 colnames(diag_p) <- c("visitId", "icd9")
 elix <- rbind(elix, diag_p)
+rm(diag_p)
 
 # based on ICD9s for each patient/admission, excluding ICDs NOT Present on Admission,
 # make matrix of all 30 Elixhauser categories (T/F)
+
+# checkpoint
+# save(pt, elix, file="rao_workingdata/ptelix.rda")
+# load(file="rao_workingdata/ptelix.rda")
+
 elix <- as.data.frame(icd9ComorbidElix(elix, visitId="visitId", icd9Field="icd9"))
 
 # add visitId as index and drop rownames
@@ -285,6 +303,10 @@ pt <- left_join(pt, elix)
 
 # Clean Up Environment
 rm(elix, diags, odiags, opoas)
+
+# checkpoint
+# save(pt, file="rao_workingdata/pt.rda")
+# load(file="rao_workingdata/pt.rda")
 
 # to get listing of ICD9 descriptions for each patient
 # apply(pt[1,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
