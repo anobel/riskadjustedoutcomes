@@ -32,6 +32,47 @@ icd9detail <- function(df, id, date) {
 }
 
 ##################
+#### Defined Data
+##################
+codes <- list()
+
+### Diagnosis Codes
+# Bladder Cancer ICD9 Diagnoses Codes
+codes$DxBladderCa <- c(icd9Children("188"), "2337", "2339", "2367", "2394")
+
+# Kidney Cancer ICD9 Codes (Miller DC, Gore JL)
+codes$DxKidneyCa <- c("189", "1890", "1891", "1898", "1899", 
+                      "1580", "1715", 
+                      "1940", "1952", "1976", "1980", "1981", "19889", "1991", 
+                      "2239", 
+                      "2339", "2354", "2369", "23690", "23691", "23699", "2372", "2381", "2388", "2395", "2399")
+
+# Prostate Cancer ICD9 Diagnosis Codes
+codes$DxProstateCa <- c("185", "1850")
+
+# Testis Cancer ICD9 Diagnosis Codes (Mossanen M 2014)
+codes$DxTestisCa <- c("186", "1860", "1869", "1580", "158","1976", "2118", "2354")
+
+### Procedure Codes
+# Radical Nephrectomy Procedure Codes (DCM, JLG)
+codes$SxRadNeph <- c("5551", "5552", "5554")
+
+# Partial Nephrectomy Procedure Codes (DCM, JLG)
+codes$SxPartialNeph <- c("5501", "5524", "5531", "5539", "554", "5540", "5581", "5589", "5591", 
+                         "5902", "5909", "5921")
+
+# Radical Cystectomy Procedure Codes
+codes$SxCystectomy <- c("577", "5771", "5779")
+
+# Radical Prostatectomy Procedure Codes
+codes$SxRP <- c("605", "6050")
+
+# RPLND Procedure Codes (Mossanen 2014)
+codes$SxRPLND <- c("590", "5900", "5902", "5909", "4029", "403", "4052", "4059")
+
+#
+
+##################
 #### Import Data
 ##################
 
@@ -361,7 +402,6 @@ pt <- readmit %>%
   right_join()
 
 rm(readmit)
-
 
 # make cohorts for disease specific admissions
 
