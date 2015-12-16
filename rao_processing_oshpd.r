@@ -345,7 +345,7 @@ readmit <- readmit %>%
 
 # Recombine 
 readmit <- collect(readmit)
-
+rm(cluster)
 # Any fields that were not tagged as readmits will be marked FALSE
 readmit$within30d[is.na(readmit$within30d)] <- F
 readmit$isreadmit[is.na(readmit$isreadmit)] <- F
@@ -355,8 +355,14 @@ readmit$isreadmit[is.na(readmit$isreadmit)] <- F
 # save(readmit, pt, file="rao_workingdata/readmit.rda")
 # load(file="rao_workingdata/pt.rda")
 
-####
-# merge readmit back to pt data
+# Merge readmit assignments back to main patient data
+pt <- readmit %>%
+  select(rln, admtdate, readmitdays, within30d, isreadmit) %>%
+  right_join()
+
+rm(readmit)
+
+
 # make cohorts for disease specific admissions
 
 
