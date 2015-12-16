@@ -15,6 +15,20 @@ library(ggplot2)
 # Specialty Packages
 library(icd9)
 
+##################
+#### Functions
+##################
+
+# can look up listing of ICD9 codes based on id (RLN) and date of admission
+icd9detail <- function(df, id, date) {
+  require(icd9)
+  df <- df[,c("admtdate", "rln", diags)]
+  df <- df %>%
+    filter(as.character(admtdate)==date) %>%
+    filter(rln==id) %>%
+    select(contains("diag"))
+  apply(df, 1, function(x) icd9Explain(x[icd9IsReal(x)]))
+}
 
 ##################
 #### Import Data
