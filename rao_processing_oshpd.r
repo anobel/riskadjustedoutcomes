@@ -22,6 +22,7 @@ library(icd9)
 # can look up listing of ICD9 codes based on id (RLN) and date of admission
 icd9detail <- function(df, id, date) {
   require(icd9)
+  diags <- c("diag_p", paste("odiag",1:24,sep=""))
   df <- df[,c("admtdate", "rln", diags)]
   df <- df %>%
     filter(as.character(admtdate)==date) %>%
