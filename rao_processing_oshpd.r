@@ -15,6 +15,7 @@ library(ggplot2)
 # Specialty Packages
 library(icd9)
 
+
 ##################
 #### Import Data
 ##################
@@ -345,7 +346,7 @@ readmit <- partition(readmit, rln)
 readmit <- readmit %>%
   mutate(readmitdays = difftime(lead(admtdate),dschdate, units="days")) %>%
   mutate(within30d = ifelse(readmitdays<= 30 & readmitdays!=0, T, F)) %>%
-  mutate(isreadmit = ifelse(within30d==T & admtype !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
+  mutate(isreadmit = ifelse(within30d==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
 
 # Recombine 
 readmit <- collect(readmit)
@@ -354,8 +355,14 @@ readmit <- collect(readmit)
 readmit$within30d[is.na(readmit$within30d)] <- F
 readmit$isreadmit[is.na(readmit$isreadmit)] <- F
 
+# Checkpoint
+# setwd("/Users/anobel/Documents/code/rao/")
+# save(readmit, pt, file="rao_workingdata/readmit.rda")
+# load(file="rao_workingdata/pt.rda")
 
 ####
+# merge readmit back to pt data
+# make cohorts for disease specific admissions
 
 
 # misc code
@@ -363,4 +370,4 @@ readmit$isreadmit[is.na(readmit$isreadmit)] <- F
 # t <- pt %>% sample_n(10^4, replace=F)
 
 # to get listing of ICD9 descriptions for each patient
-# apply(pt[1,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
+# apply(pt[4,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
