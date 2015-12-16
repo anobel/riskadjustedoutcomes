@@ -229,11 +229,6 @@ rm(msdrg)
 # create visitId variable (combining RLN and admission date) for assigning Elixhauser codes
 pt$visitId = paste(pt$rln, pt$admtdate, sep="_")
 
-
-#### Checkpoint 
-# save(pt, file="rao_workingdata/pt.rda")
-# rm(pt)
-
 ###################################
 #### Assign Elixhauser Comorbidity
 ###################################
@@ -281,11 +276,6 @@ temp <- temp[!is.na(temp$number),]
 # Assign a flag for drops
 temp$drop <- TRUE
 
-### Checkpoint
-# setwd("/Users/anobel/Documents/code/rao/")
-# save(elix, temp, file="rao_workingdata/elix.rda")
-load(file="rao_workingdata/elix.rda")
-
 # Merge working list of ICD9s with temp DF to identify rows to drop, drop them, and simplify DF, prep for icd9ComorbidElix()
 elix <- elix %>%
   left_join(temp) %>%
@@ -306,10 +296,6 @@ rm(diag_p)
 # based on ICD9s for each patient/admission, excluding ICDs NOT Present on Admission,
 # make matrix of all 30 Elixhauser categories (T/F)
 
-# checkpoint
-# save(pt, elix, file="rao_workingdata/ptelix.rda")
-# load(file="rao_workingdata/ptelix.rda")
-
 elix <- as.data.frame(icd9ComorbidElix(elix, visitId="visitId", icd9Field="icd9"))
 
 # add visitId as index and drop rownames
@@ -324,12 +310,6 @@ pt <- left_join(pt, elix)
 
 # Clean Up Environment
 rm(elix, diags, odiags, opoas)
-
-# checkpoint
-
-# setwd("/Users/anobel/Documents/code/rao/")
-# save(pt, file="rao_workingdata/pt.rda")
-# load(file="rao_workingdata/pt.rda")
 
 #####################################
 #### Identify Readmissions within 30d
