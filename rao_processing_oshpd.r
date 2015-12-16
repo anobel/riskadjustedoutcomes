@@ -36,6 +36,10 @@ pt <- pt[,sort(colnames(pt))]
 #### Data Cleaning
 ##################
 
+# Drop if RLN is missing (based on Social Security Number, so patients without SSN have missing RLN)
+# Cannot track outcomes for these patients. May introduce bias.
+pt <- pt %>% filter(rln!="---------")
+
 # Format all dates to POSIX
 # make a vector identifying the date fields
 d <- c("admtdate", "bthdate", "dschdate", "proc_pdt", paste("procdt", 1:20, sep=""))
@@ -58,6 +62,7 @@ pt$typcare <- factor(pt$typcare, levels = c(0, 1, 3, 4, 5, 6), labels=c("Blank",
 
 # Disposition
 pt$disp <- factor(pt$disp, levels=0:13, labels=c("Invalid", "Home", "Acute Care", "Other Care Level", "SNF", "Acute-Other Facility", "Other Care Level-Other Facility", "SNF-Other Facility", "Residential Care", "Incarcerated", "AMA", "Died", "Home Health", "Other"))
+# Exclude patients with the following dispositions: Invalid
 pt <- pt %>% filter(disp!="Invalid")
 
 ### Demographics
@@ -305,8 +310,57 @@ pt <- left_join(pt, elix)
 rm(elix, diags, odiags, opoas)
 
 # checkpoint
+
+# setwd("/Users/anobel/Documents/code/rao/")
 # save(pt, file="rao_workingdata/pt.rda")
 # load(file="rao_workingdata/pt.rda")
+
+#####################################
+#### Identify Readmissions within 30d
+#####################################
+
+# Will do these manipulations using parallel processing enabled by multidplyr package
+library(multidplyr)
+
+# set up 8 core cluster
+cluster <- create_cluster(8)
+set_default_cluster(cluster)
+
+# Limit to the fields necessary for this calculation
+# group by rln and arrange in preparation for splitting for parallel
+readmit <- pt %>% 
+  select(rln, admtype, admtdate, dschdate, disp) %>%
+  group_by(rln) %>%
+  arrange(rln, admtdate)
+
+# Partition the data into equal sized shards for parallelized calculation
+readmit <- partition(readmit, rln)
+
+# Assign Readmissions
+# Must have been within 30 days of discharge date
+# Exclude if discharge data and admission date the same (transfers)
+# Does not count as readmission if it was a scheduled admission
+# Exclude admissions from being eligible for readmission if the dispo was:
+# AMA, Incarcerated, Died, Acute-Other Facility, Other Care Level-Other Facility
+readmit <- readmit %>%
+  mutate(readmitdays = difftime(lead(admtdate),dschdate, units="days")) %>%
+  mutate(within30d = ifelse(readmitdays<= 30 & readmitdays!=0, T, F)) %>%
+  mutate(isreadmit = ifelse(within30d==T & admtype !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
+
+# Recombine 
+readmit <- collect(readmit)
+
+# Any fields that were not tagged as readmits will be marked FALSE
+readmit$within30d[is.na(readmit$within30d)] <- F
+readmit$isreadmit[is.na(readmit$isreadmit)] <- F
+
+
+####
+
+
+# misc code
+# sample the dataset
+# t <- pt %>% sample_n(10^4, replace=F)
 
 # to get listing of ICD9 descriptions for each patient
 # apply(pt[1,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
