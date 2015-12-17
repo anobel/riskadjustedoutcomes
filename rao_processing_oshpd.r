@@ -59,7 +59,7 @@ codes$SxRadNx <- c("5551", "5552", "5554")
 
 # Partial Nephrectomy Procedure Codes (DCM, JLG)
 codes$SxPartialNx <- c("5501", "5524", "5531", "5539", "554", "5540", "5581", "5589", "5591", 
-                         "5902", "5909", "5921")
+                       "5902", "5909", "5921")
 
 # Radical Cystectomy Procedure Codes
 codes$SxCystectomy <- c("577", "5771", "5779")
@@ -455,11 +455,19 @@ pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort
 # Checkpoint
 # setwd("/Users/anobel/Documents/code/rao/")
 # save(pt, cohort, file="rao_workingdata/pt.rda")
+
 # load(file="rao_workingdata/pt.rda")
+# Make smaller subset of all patients and also GU specific cohort
+# ptgu <- droplevels(pt[!is.na(pt$cohort),])
+# pt <- pt %>% ungroup() %>% sample_n(100000, replace=F) %>% droplevels()
+# save(pt, ptgu, file="rao_workingdata/ptlite.rda")
+
+
+
 
 # misc code
 # sample the dataset
-t <- pt %>% ungroup() %>% sample_n(10000, replace=F)
+
 
 # to get listing of ICD9 descriptions for each patient
 # apply(pt[4,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
