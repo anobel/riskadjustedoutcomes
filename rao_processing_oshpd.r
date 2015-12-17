@@ -452,34 +452,10 @@ pt$cohort[cohort$SxRP>0 & cohort$DxProstateCa>0 & cohort$DxKidneyCa>0 & (cohort$
 # Testis and Kidney cancer, RPLND and Radical or Partial Nx
 pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0) & pt$sex!="Male"] <- "Multiple GU Sx"
 
-
-table(pt$cohort)
-table(pt$cohort, pt$sex)
-
 # Checkpoint
 # setwd("/Users/anobel/Documents/code/rao/")
 # save(pt, cohort, file="rao_workingdata/pt.rda")
 # load(file="rao_workingdata/pt.rda")
-
-# Validate Individual entries here
-t <- cbind(pt, cohort)
-
-t1 <- pt %>%
-  select(rln, admtdate, cohort, contains("Sx"), contains("Dx"), one_of(c(procs)), one_of(c(diags))) %>%
-  filter(cohort=="Multiple GU Sx") %>%
-  select(rln, admtdate, cohort)
-
-head(t1)
-
-icd9detail(t, "JH5J9G95Y", "2007-03-30")
-
-t1detail <- t %>%
-  select(rln, admtdate, cohort, contains("Sx"), contains("Dx"), one_of(c(procs)), one_of(c(diags))) %>%
-  filter(rln=="LAB33ASXL" & as.character(admtdate)=="2007-03-16")
-  
-
-# To Do:
-# identify patients that had multiple procedures within the group, mayble exclude them?
 
 # misc code
 # sample the dataset
