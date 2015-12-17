@@ -70,8 +70,6 @@ codes$SxRP <- c("605", "6050")
 # RPLND Procedure Codes (Mossanen 2014)
 codes$SxRPLND <- c("590", "5900", "5902", "5909", "4029", "403", "4052", "4059")
 
-#
-
 ##################
 #### Import Data
 ##################
@@ -416,7 +414,7 @@ cohort <- as.data.frame(pt$rln)
 cohort$DxBladderCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxBladderCa)))
 cohort$DxKidneyCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxKidneyCa)))
 cohort$DxProstateCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxProstateCa)))
-cohort$DxTestisCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxTestisCa)))
+cohort$DxTestisCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxTestisCa & pt$sex=="Male")))
 
 # Use lapply across all procedure fields (not just principal procedure)
 # Assign 1 if matches something in codes vector, and then add up rowsums
@@ -424,7 +422,7 @@ cohort$SxCystectomy <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs)))
 cohort$SxRadNx <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRadNx)))
 cohort$SxPartialNx <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxPartialNx)))
 cohort$SxRP <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRP)))
-cohort$SxRPLND <- rowSums(as.data.frame(lapply(select(t, one_of(c(procs))), function(x) x %in% codes$SxRPLND)))
+cohort$SxRPLND <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRPLND)))
 
 # Assign cohorts in main patient dataframe
 # Each patient can only be in one cohort (for now)
@@ -461,16 +459,12 @@ pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort
 
 # load(file="rao_workingdata/pt.rda")
 # Make smaller subset of all patients and also GU specific cohort
-# ptgu <- droplevels(pt[!is.na(pt$cohort),])
+# ptgu <- pt[!is.na(pt$cohort),]
+# ptgu <- ptgu[ptgu$cohort!="Multiple GU Sx",]
+# ptgu <- droplevels(ptgu)
 # pt <- pt %>% ungroup() %>% sample_n(100000, replace=F) %>% droplevels()
 # save(pt, ptgu, file="rao_workingdata/ptlite.rda")
 
-
-
-
-# misc code
-# sample the dataset
-
-
+# Misc
 # to get listing of ICD9 descriptions for each patient
 # apply(pt[4,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
