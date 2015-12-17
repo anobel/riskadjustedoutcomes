@@ -55,10 +55,10 @@ codes$DxTestisCa <- c("186", "1860", "1869", "1580", "158","1976", "2118", "2354
 
 ### Procedure Codes
 # Radical Nephrectomy Procedure Codes (DCM, JLG)
-codes$SxRadNeph <- c("5551", "5552", "5554")
+codes$SxRadNx <- c("5551", "5552", "5554")
 
 # Partial Nephrectomy Procedure Codes (DCM, JLG)
-codes$SxPartialNeph <- c("5501", "5524", "5531", "5539", "554", "5540", "5581", "5589", "5591", 
+codes$SxPartialNx <- c("5501", "5524", "5531", "5539", "554", "5540", "5581", "5589", "5591", 
                          "5902", "5909", "5921")
 
 # Radical Cystectomy Procedure Codes
@@ -280,7 +280,7 @@ odiags <- c(paste("odiag",1:24,sep=""))
 opoas <- c(paste("opoa",1:24,sep=""))
 
 # Calculate the total number of listed ICD9 diagnoses per patient
-pt$totaldiags <- apply(pt[,diags], 1, function(x) sum(!is.na(x)))
+pt$totaldx <- apply(pt[,diags], 1, function(x) sum(!is.na(x)))
 
 # Subset the "Other Diagnoses" (everything except the principal diagnosis), and their corresponding POA fields
 elix <- pt[,c(odiags, opoas)]
@@ -403,12 +403,39 @@ pt <- readmit %>%
 
 rm(readmit)
 
-# make cohorts for disease specific admissions
+#####################################
+#### Procedure Specific Cohorts
+#####################################
 
+# cystectomy, nephrectomy, partial nephrectomy, prostatectomy, RPLND
+diags <- c("diag_p", paste("odiag",1:24,sep=""))
+procs <- c("proc_p", paste("oproc",1:20,sep=""))
+
+cohort <- as.data.frame(pt$rln)
+cohort$DxBladderCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxBladderCa)))
+cohort$DxKidneyCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxKidneyCa)))
+cohort$DxProstateCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxProstateCa)))
+cohort$DxTestisCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxTestisCa)))
+cohort$SxCystectomy <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxCystectomy)))
+cohort$SxRadNx <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRadNx)))
+cohort$SxPartialNx <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxPartialNx)))
+cohort$SxRP <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRP)))
+cohort$SxRPLND <- rowSums(as.data.frame(lapply(select(t, one_of(c(procs))), function(x) x %in% codes$SxRPLND)))
+
+pt$cohort <- NA
+pt$cohort[cohort$DxBladderCa>0 & cohort$SxCystectomy>0] <- "Cystectomy"
+pt$cohort[cohort$DxKidneyCa>0 & cohort$SxRadNx>0] <- "RadNx"
+pt$cohort[cohort$DxKidneyCa>0 & cohort$SxPartialNx>0] <- "PartialNx"
+pt$cohort[cohort$DxProstateCa>0 & cohort$SxRP>0] <- "RP"
+pt$cohort[cohort$DxTestisCa>0 & cohort$SxRPLND>0] <- "RPLND"
+
+table(pt$cohort)
+
+table(pt$cohort, pt$isreadmit)
 
 # misc code
 # sample the dataset
-# t <- pt %>% sample_n(10^4, replace=F)
+t <- pt %>% ungroup() %>% sample_n(10000, replace=F)
 
 # to get listing of ICD9 descriptions for each patient
 # apply(pt[4,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
