@@ -12,7 +12,6 @@ params:
     cohort: "Cystectomy"
 ---
 
-  
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=T)
 ```
@@ -26,19 +25,126 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, ca
 </style>
   
 
-```{r, message=F}
+```{r packages, cache=F}
+# Data Cleaning Packages
+library(lubridate)
+library(plyr)
+library(dplyr)
 library(stringr)
+library(tidyr)
+
+# Graphics Packages
+library(DT)
 library(ggplot2)
 library(ggthemes)
-library(RColorBrewer)
 library(knitr)
+library(RColorBrewer)
 library(stargazer)
-library(DT)
-library(dplyr)
+
+# Specialty Packages
 library(icd9)
 ```
 
-```{r loaddata}
-# load(file="rao_workingdata/pt.rda")
+```{r constants.functions}
+bg <- "#FCFCFA"
+main1 <- "#ca0020"
+acc1 <- "#f4a582"
+main2 <- "#92c5de"
+acc2 <- "#0571b0"
+
+# this function takes arguments x=value, y=number of sig figs, prints mean +/- SD in html
+prettyMeanSD <- function (x,y) {
+  mean <- prettyNum(round(mean(x, na.rm=TRUE),y), big.mark = ",")
+  sd <-  prettyNum(round(sd(x, na.rm=TRUE),y), big.mark = ",")
+  paste(mean, " &plusmn; ",sd,sep="")
+}
+
+prettyMedianIQR <- function (x,y) {
+  median <- prettyNum(round(median(x, na.rm=TRUE),y), big.mark = ",")
+  tiles <- round(quantile(x, c(.25, .75), na.rm=TRUE),y)
+  paste(median, " (",tiles[1], " - ", tiles[2], ")",sep="")
+}
 ```
 
+```{r loaddata}
+# Load full dataset (12.5m obs)
+# when loading the full data set, in chunk options set cache.lazy=F
+# load(file="rao_workingdata/pt.rda")
+
+# Load lite dataset (sample of 100,000 obs)
+load(file="rao_workingdata/ptlite.rda")
+pt <- pt[year(pt$admtdate)>2005,] # take out after next run of main data
+```
+
+# Overall Summary
+- Total Records: `r nrow(pt)`
+- Records in GU specific cohort `r nrow(ptgu)`
+
+```{r fields, cache=F}
+datatable(as.data.frame(names(pt)))
+```
+
+# Admission Dates
+Overall Cohort
+```{r}
+pt %>%
+  ggplot(aes(x=admtdate)) + 
+  geom_histogram(fill=main2, color="white") + 
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), 
+        legend.background= element_rect(fill=bg), 
+        legend.title=element_blank()) + 
+  labs(title="Admission Date Distribution, Entire Cohort", 
+       y="Number of Admissions", 
+       x="Admission Date")
+```
+
+Overall GU Cohort
+```{r}
+kable(t(table(ptgu$cohort)))
+
+ptgu %>%
+  ggplot(aes(x=admtdate, weight=1)) + 
+  # geom_histogram(aes(y=..density..), fill=main2, alpha=0.3, color="white") +
+  geom_density(aes(y=..count.., color=cohort)) +
+  scale_color_brewer(palette = "Dark2") + 
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), 
+        legend.background= element_rect(fill=bg), 
+        legend.title=element_blank()) + 
+  labs(title="Admission Dates for GU Cohort", 
+       y="Number of Admissions", 
+       x="Admission Date")
+```
+
+# Readmissions
+Overall Readmission Rate (%)
+```{r}
+kable(t(as.matrix(round(100*prop.table(table(pt$isreadmit)),2))))
+```
+
+GU Specific Readmission Rate
+```{r}
+kable(t(as.matrix(round(100*prop.table(table(ptgu$isreadmit, ptgu$cohort),2),2))))
+```
+
+
+
+```{r}
+# fields to for descriptive analyses
+
+# table isreadmit, also by GU cohort
+# disp
+# ethncty
+# race
+# race_grp
+
+# oshpd_id
+# pay_cat
+# pay_plan
+# pay_type
+# pls_abbr
+# sev_code
+# sex
+# typcare
+# elixsum
