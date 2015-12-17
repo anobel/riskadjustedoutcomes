@@ -107,6 +107,9 @@ pt[,d] <- as.data.frame(lapply(pt[,d], as.character), stringsAsFactors = F)
 # Convert date fields from character to POSIXct using lubridate, replace in dataframe
 pt[,d] <- as.data.frame(lapply(pt[,d], parse_date_time, orders="mdY"))
 
+# Drop if admit date is prior to 2006, these must be data entry errors
+pt <- pt[year(pt$admtdate)>2005,]
+
 # Clean workspace
 rm(d)
 
