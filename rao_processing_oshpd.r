@@ -391,11 +391,6 @@ rm(cluster)
 readmit$within30d[is.na(readmit$within30d)] <- F
 readmit$isreadmit[is.na(readmit$isreadmit)] <- F
 
-# Checkpoint
-# setwd("/Users/anobel/Documents/code/rao/")
-# save(readmit, pt, file="rao_workingdata/readmit.rda")
-# load(file="rao_workingdata/pt.rda")
-
 # Merge readmit assignments back to main patient data
 pt <- readmit %>%
   select(rln, admtdate, readmitdays, within30d, isreadmit) %>%
@@ -406,32 +401,85 @@ rm(readmit)
 #####################################
 #### Procedure Specific Cohorts
 #####################################
-
-# cystectomy, nephrectomy, partial nephrectomy, prostatectomy, RPLND
 diags <- c("diag_p", paste("odiag",1:24,sep=""))
 procs <- c("proc_p", paste("oproc",1:20,sep=""))
 
+# Create empty DF with RLNs to populate
 cohort <- as.data.frame(pt$rln)
+
+# Assign Diagnoses
+# Use lapply across all diagnosis fields (not just principal diagnosis)
+# Assign 1 if matches something in codes vector, and then add up rowsums
 cohort$DxBladderCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxBladderCa)))
 cohort$DxKidneyCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxKidneyCa)))
 cohort$DxProstateCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxProstateCa)))
 cohort$DxTestisCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxTestisCa)))
+
+# Use lapply across all procedure fields (not just principal procedure)
+# Assign 1 if matches something in codes vector, and then add up rowsums
 cohort$SxCystectomy <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxCystectomy)))
 cohort$SxRadNx <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRadNx)))
 cohort$SxPartialNx <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxPartialNx)))
 cohort$SxRP <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRP)))
 cohort$SxRPLND <- rowSums(as.data.frame(lapply(select(t, one_of(c(procs))), function(x) x %in% codes$SxRPLND)))
 
+# Assign cohorts in main patient dataframe
+# Each patient can only be in one cohort (for now)
+# Can create possibilities for multiple cohorts if necessary for other analyses
 pt$cohort <- NA
-pt$cohort[cohort$DxBladderCa>0 & cohort$SxCystectomy>0] <- "Cystectomy"
 pt$cohort[cohort$DxKidneyCa>0 & cohort$SxRadNx>0] <- "RadNx"
 pt$cohort[cohort$DxKidneyCa>0 & cohort$SxPartialNx>0] <- "PartialNx"
-pt$cohort[cohort$DxProstateCa>0 & cohort$SxRP>0] <- "RP"
-pt$cohort[cohort$DxTestisCa>0 & cohort$SxRPLND>0] <- "RPLND"
+pt$cohort[cohort$DxProstateCa>0 & cohort$SxRP>0 & pt$sex=="Male"] <- "RP"
+
+# Assign cystectomy AFTER prostatectomy
+# often cystoprostatectomy is coded as cystectomy AND prostatectomy, this way its assigned to cystectomy cohort
+pt$cohort[cohort$DxBladderCa>0 & cohort$SxCystectomy>0] <- "Cystectomy"
+
+# Limiting RPLND to Males only. Although it should be obvious from Dx codes for testis cancer,
+# 198.82 "Secondary malignant neoplasm of genital organs" is often used for gyn malignancies (>1300 cases)
+pt$cohort[cohort$DxTestisCa>0 & cohort$SxRPLND>0 & pt$sex=="Male"] <- "RPLND"
+
+# Exclude if patients have the following combinations of surgeries AND diagnoses
+# Cystectomy and RPLND, Bladder cancer AND Testis Cancer
+pt$cohort[cohort$SxCystectomy>0 & cohort$DxBladderCa>0 & cohort$SxRPLND>0 & cohort$DxTestisCa>0] <- "Multiple GU Sx"
+
+# Cystectomy AND Radical or Partial Nx, Bladder and Kidney Cancer
+pt$cohort[cohort$SxCystectomy>0 & cohort$DxBladderCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0)] <- "Multiple GU Sx"
+
+# Prostate and Kidney cancer, RP and Radical or Partial Nx
+pt$cohort[cohort$SxRP>0 & cohort$DxProstateCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0)] <- "Multiple GU Sx"
+
+# Testis and Kidney cancer, RPLND and Radical or Partial Nx
+pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0) & pt$sex!="Male"] <- "Multiple GU Sx"
+
 
 table(pt$cohort)
+table(pt$cohort, pt$sex)
 
-table(pt$cohort, pt$isreadmit)
+# Checkpoint
+# setwd("/Users/anobel/Documents/code/rao/")
+# save(pt, cohort, file="rao_workingdata/pt.rda")
+# load(file="rao_workingdata/pt.rda")
+
+# Validate Individual entries here
+t <- cbind(pt, cohort)
+
+t1 <- pt %>%
+  select(rln, admtdate, cohort, contains("Sx"), contains("Dx"), one_of(c(procs)), one_of(c(diags))) %>%
+  filter(cohort=="Multiple GU Sx") %>%
+  select(rln, admtdate, cohort)
+
+head(t1)
+
+icd9detail(t, "JH5J9G95Y", "2007-03-30")
+
+t1detail <- t %>%
+  select(rln, admtdate, cohort, contains("Sx"), contains("Dx"), one_of(c(procs)), one_of(c(diags))) %>%
+  filter(rln=="LAB33ASXL" & as.character(admtdate)=="2007-03-16")
+  
+
+# To Do:
+# identify patients that had multiple procedures within the group, mayble exclude them?
 
 # misc code
 # sample the dataset
