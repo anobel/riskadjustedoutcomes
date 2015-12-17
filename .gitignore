@@ -2,6 +2,7 @@
 .RData
 .Rhistory
 *.Rproj
+*.Rapp.history
 .Rproj.user/
 .Rproj.user
 *.pdf
