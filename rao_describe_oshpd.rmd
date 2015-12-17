@@ -1,0 +1,44 @@
+---
+title: "Risk Adjusted Outcomes for Urologic Oncology"
+subtitle: "OSHPD Data Descriptions"
+author: "Anobel Y Odisho, Ruth Etzioni, John L Gore"
+date: "`r Sys.Date()`"
+output: 
+  tufterhandout::html_tufte_handout:
+        theme: cosmo
+        css: floating.css
+        toc: yes
+params:
+    cohort: "Cystectomy"
+---
+
+  
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=T)
+```
+
+<!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
+<style>
+  td {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+</style>
+  
+
+```{r, message=F}
+library(stringr)
+library(ggplot2)
+library(ggthemes)
+library(RColorBrewer)
+library(knitr)
+library(stargazer)
+library(DT)
+library(dplyr)
+library(icd9)
+```
+
+```{r loaddata}
+# load(file="rao_workingdata/pt.rda")
+```
+
