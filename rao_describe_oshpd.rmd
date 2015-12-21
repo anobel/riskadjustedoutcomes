@@ -9,13 +9,13 @@ output:
         css: floating.css
         toc: yes
 params:
-    cohort: "Cystectomy"
+    cohort: "RP"
 ---
 
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=T)
 ```
-
+?knitr
 <!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
 <style>
   td {
@@ -118,33 +118,57 @@ ptgu %>%
 ```
 
 # Readmissions
-Overall Readmission Rate (%)
-```{r}
-kable(t(as.matrix(round(100*prop.table(table(pt$isreadmit)),2))))
+Overall 30 day Readmission Rate (%)
+```{r, results="asis"}
+t1 <- round(100*prop.table(table(pt$isreadmit)),2)
+t2 <- round(100*prop.table(table(ptgu$isreadmit, ptgu$cohort),2),2)
+t <- as.data.frame(cbind(t1, t2))
+colnames(t)[1] <- "All Patients"
+stargazer(t, summary=F, type="html", digits = 2)
 ```
 
-GU Specific Readmission Rate
-```{r}
-kable(t(as.matrix(round(100*prop.table(table(ptgu$isreadmit, ptgu$cohort),2),2))))
+# Disposition
+Overall Disposition Distribution (%)
+```{r, results="asis"}
+t1 <- round(100*prop.table(table(pt$disp)), 2)
+t2 <- round(100*prop.table(table(ptgu$disp, ptgu$cohort),2),2)
+
+t <- as.data.frame(cbind(t1, t2))
+colnames(t)[1] <- "All Patients"
+stargazer(t, summary=F, type="html", digits = 2, digits.extra = 2)
 ```
 
+# Race/Ethnicity
+(%)
+```{r, results="asis"}
+t1 <- round(100*prop.table(table(pt$race_grp)), 2)
+t2 <- round(100*prop.table(table(ptgu$race_grp, ptgu$cohort),2),2)
 
+t <- as.data.frame(cbind(t1, t2))
+colnames(t)[1] <- "All Patients"
+stargazer(t, summary=F, type="html", digits = 2, digits.extra = 2)
+```
+
+# Payers
+Payer Category (%)
+```{r, results="asis"}
+t1 <- round(100*prop.table(table(pt$pay_cat)), 2)
+t2 <- round(100*prop.table(table(ptgu$pay_cat, ptgu$cohort),2),2)
+
+t <- as.data.frame(cbind(t1, t2))
+colnames(t)[1] <- "All Patients"
+stargazer(t, summary=F, type="html")
+```
+<br>
+
+Payer Type (%)
+```{r, results="asis"}
+t1 <- round(100*prop.table(table(pt$pay_type)), 2)
+t2 <- round(100*prop.table(table(ptgu$pay_type, ptgu$cohort),2),2)
+
+t <- as.data.frame(cbind(t1, t2))
+colnames(t)[1] <- "All Patients"
+stargazer(t, summary=F, type="html")
+```
 
 ```{r}
-# fields to for descriptive analyses
-
-# table isreadmit, also by GU cohort
-# disp
-# ethncty
-# race
-# race_grp
-
-# oshpd_id
-# pay_cat
-# pay_plan
-# pay_type
-# pls_abbr
-# sev_code
-# sex
-# typcare
-# elixsum
