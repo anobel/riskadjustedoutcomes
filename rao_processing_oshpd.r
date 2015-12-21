@@ -140,7 +140,6 @@ pt$race_grp <- factor(pt$race_grp, levels=0:5, labels = c("Unknown", "White", "B
 # Drop two primary language fields: write in and ID, just keep the abbreviation field
 pt <- pt %>% select(-pls_id, -pls_wrtin)
 
-
 # Hospital County (NOT coded as FIPS codes, jsut numerically 1:58)
 # load list of California Counties from Area Health Reseource File
 load("rao_workingdata/arf12.rda")
@@ -211,7 +210,7 @@ pt$pay_cat <- factor(pt$pay_cat, levels=0:9, labels=c("Invalid", "Medicare", "Me
 payers <- apply(data.frame(paste("rao_originaldata/oshpd_appendix/appendix_payers/",list.files("rao_originaldata/oshpd_appendix/appendix_payers"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
 # combine into one dataframe
 payers <- do.call(rbind, payers)
-
+table(pt$plan_name)
 # remove white space characters at start and end of payer names
 payers$plan_name <- str_trim(payers$plan_name)
 
