@@ -328,7 +328,6 @@ elix <- elix %>%
 rm(temp)
 
 # diag_p: bring in primary diagnoses
-load(file="rao_workingdata/pt.rda")
 diag_p <- pt[,c("visitId", "diag_p")]
 colnames(diag_p) <- c("visitId", "icd9")
 elix <- rbind(elix, diag_p)
@@ -353,7 +352,7 @@ pt <- left_join(pt, elix)
 rm(elix, diags, odiags, opoas)
 
 #####################################
-#### Identify Readmissions within 30d
+#### Identify Readmissions
 #####################################
 
 # Will do these manipulations using parallel processing enabled by multidplyr package
@@ -374,26 +373,36 @@ readmit <- pt %>%
 readmit <- partition(readmit, rln)
 
 # Assign Readmissions
-# Must have been within 30 days of discharge date
+# Must have been within 30/90 days of discharge date
 # Exclude if discharge data and admission date the same (transfers)
 # Does not count as readmission if it was a scheduled admission
 # Exclude admissions from being eligible for readmission if the dispo was:
 # AMA, Incarcerated, Died, Acute-Other Facility, Other Care Level-Other Facility
+
 readmit <- readmit %>%
-  mutate(readmitdays = difftime(lead(admtdate),dschdate, units="days")) %>%
-  mutate(within30d = ifelse(readmitdays<= 30 & readmitdays!=0, T, F)) %>%
-  mutate(isreadmit = ifelse(within30d==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
+  mutate(los = difftime(dschdate, admtdate, units="days")) %>%
+  mutate(readmitdaysadm = difftime(lead(admtdate),admtdate, units="days")) %>%
+  mutate(readmitdaysdc = difftime(lead(admtdate),dschdate, units="days")) %>%
+  mutate(within30adm = ifelse(readmitdaysadm<= 30 & readmitdaysadm!=0, T, F)) %>%
+  mutate(within30dc = ifelse(readmitdaysdc<= 30 & readmitdaysdc!=0, T, F)) %>%
+  mutate(within90dc = ifelse(readmitdaysdc<= 90 & readmitdaysdc!=0, T, F)) %>%
+  mutate(isreadmit30adm = ifelse(within30adm==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F)) %>%
+  mutate(isreadmit30dc = ifelse(within30dc==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F)) %>%
+  mutate(isreadmit90dc = ifelse(within90dc==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
 
 # Recombine 
 readmit <- collect(readmit)
 rm(cluster)
+
 # Any fields that were not tagged as readmits will be marked FALSE
 readmit$within30d[is.na(readmit$within30d)] <- F
-readmit$isreadmit[is.na(readmit$isreadmit)] <- F
+readmit$isreadmit30[is.na(readmit$isreadmit30)] <- F
+readmit$within90d[is.na(readmit$within90d)] <- F
+readmit$isreadmit90[is.na(readmit$isreadmit90)] <- F
 
 # Merge readmit assignments back to main patient data
 pt <- readmit %>%
-  select(rln, admtdate, readmitdays, within30d, isreadmit) %>%
+  select(rln, admtdate, los, readmitdays, within30d, within90d, isreadmit30, isreadmit90) %>%
   right_join()
 
 rm(readmit)
