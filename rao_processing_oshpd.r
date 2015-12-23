@@ -122,7 +122,6 @@ pt$typcare <- factor(pt$typcare, levels = c(0, 1, 3, 4, 5, 6), labels=c("Blank",
 pt$disp <- factor(pt$disp, levels=0:13, labels=c("Invalid", "Home", "Acute Care", "Other Care Level", "SNF", "Acute-Other Facility", "Other Care Level-Other Facility", "SNF-Other Facility", "Residential Care", "Incarcerated", "AMA", "Died", "Home Health", "Other"))
 # Exclude patients with the following dispositions: Invalid
 pt <- pt %>% filter(disp!="Invalid")
-
 ### Demographics
 # Sex
 pt$sex <- factor(pt$sex, levels=1:4, labels=c("Male", "Female", "Other", "Unknown"))
@@ -328,7 +327,6 @@ elix <- elix %>%
 rm(temp)
 
 # diag_p: bring in primary diagnoses
-load(file="rao_workingdata/pt.rda")
 diag_p <- pt[,c("visitId", "diag_p")]
 colnames(diag_p) <- c("visitId", "icd9")
 elix <- rbind(elix, diag_p)
@@ -353,7 +351,7 @@ pt <- left_join(pt, elix)
 rm(elix, diags, odiags, opoas)
 
 #####################################
-#### Identify Readmissions within 30d
+#### Identify Readmissions
 #####################################
 
 # Will do these manipulations using parallel processing enabled by multidplyr package
@@ -374,33 +372,46 @@ readmit <- pt %>%
 readmit <- partition(readmit, rln)
 
 # Assign Readmissions
-# Must have been within 30 days of discharge date
+# Must have been within 30/90 days of discharge date
 # Exclude if discharge data and admission date the same (transfers)
 # Does not count as readmission if it was a scheduled admission
 # Exclude admissions from being eligible for readmission if the dispo was:
 # AMA, Incarcerated, Died, Acute-Other Facility, Other Care Level-Other Facility
+
 readmit <- readmit %>%
-  mutate(readmitdays = difftime(lead(admtdate),dschdate, units="days")) %>%
-  mutate(within30d = ifelse(readmitdays<= 30 & readmitdays!=0, T, F)) %>%
-  mutate(isreadmit = ifelse(within30d==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
+  mutate(los = difftime(dschdate, admtdate, units="days")) %>%
+  mutate(readmitdaysadm = difftime(lead(admtdate),admtdate, units="days")) %>%
+  mutate(readmitdaysdc = difftime(lead(admtdate),dschdate, units="days")) %>%
+  mutate(within30adm = ifelse(readmitdaysadm<= 30 & readmitdaysadm!=0, T, F)) %>%
+  mutate(within30dc = ifelse(readmitdaysdc<= 30 & readmitdaysdc!=0, T, F)) %>%
+  mutate(within90dc = ifelse(readmitdaysdc<= 90 & readmitdaysdc!=0, T, F)) %>%
+  mutate(isreadmit30adm = ifelse(within30adm==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F)) %>%
+  mutate(isreadmit30dc = ifelse(within30dc==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F)) %>%
+  mutate(isreadmit90dc = ifelse(within90dc==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
 
 # Recombine 
 readmit <- collect(readmit)
 rm(cluster)
+
 # Any fields that were not tagged as readmits will be marked FALSE
-readmit$within30d[is.na(readmit$within30d)] <- F
-readmit$isreadmit[is.na(readmit$isreadmit)] <- F
+readmit$within30adm[is.na(readmit$within30adm)] <- F
+readmit$isreadmit30adm[is.na(readmit$isreadmit30adm)] <- F
+readmit$within30dc[is.na(readmit$within30dc)] <- F
+readmit$isreadmit30dc[is.na(readmit$isreadmit30dc)] <- F
+readmit$within90dc[is.na(readmit$within90dc)] <- F
+readmit$isreadmit90dc[is.na(readmit$isreadmit90dc)] <- F
 
 # Merge readmit assignments back to main patient data
 pt <- readmit %>%
-  select(rln, admtdate, readmitdays, within30d, isreadmit) %>%
-  right_join()
+  select(rln, admtdate, los, readmitdaysadm, readmitdaysdc, within30adm, within30dc, within90dc, isreadmit30adm, isreadmit30dc, isreadmit90dc) %>%
+  right_join(pt)
 
 rm(readmit)
 
 #####################################
 #### Procedure Specific Cohorts
 #####################################
+# Create vectors for future use
 diags <- c("diag_p", paste("odiag",1:24,sep=""))
 procs <- c("proc_p", paste("oproc",1:20,sep=""))
 
@@ -456,7 +467,6 @@ pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort
 # setwd("/Users/anobel/Documents/code/rao/")
 # save(pt, cohort, file="rao_workingdata/pt.rda")
 
-# load(file="rao_workingdata/pt.rda")
 # Make smaller subset of all patients and also GU specific cohort
 # ptgu <- pt[!is.na(pt$cohort),]
 # ptgu <- ptgu[ptgu$cohort!="Multiple GU Sx",]
