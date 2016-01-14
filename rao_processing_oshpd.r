@@ -124,7 +124,13 @@ pt$disp <- factor(pt$disp, levels=0:13, labels=c("Invalid", "Home", "Acute Care"
 pt <- pt %>% filter(disp!="Invalid")
 ### Demographics
 # Sex
-pt$sex <- factor(pt$sex, levels=1:4, labels=c("Male", "Female", "Other", "Unknown"))
+# Keep only male/female categories
+pt <- pt %>% filter(sex<3)
+pt$sex <- factor(pt$sex, levels=1:2, labels=c("Male", "Female"))
+t <- pt %>% filter(sex=="Male"|sex=="Female")
+# Age
+# To prep for analysis, set age 18 as the baseline (0), and divide by 10 for ease of interpretation
+pt$agyradmcentered <- (pt$agyradm-18)/10
 
 # Ethnicity (Self-Report)
 pt$ethncty <- factor(pt$ethncty, levels=0:3, labels=c("Invalid", "Hispanic", "Non-Hispanic", "Unknown"))
@@ -407,7 +413,6 @@ pt <- readmit %>%
   right_join(pt)
 
 rm(readmit)
-
 
 #####################################
 #### Procedure Specific Cohorts
