@@ -9,13 +9,13 @@ output:
         css: floating.css
         toc: yes
 params:
-    cohort: "RP"
+    cohort: "Cystectomy"
 ---
 
 ```{r global_options, include=FALSE}
-knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=T)
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=F)
 ```
-?knitr
+
 <!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
 <style>
   td {
@@ -41,8 +41,10 @@ library(knitr)
 library(RColorBrewer)
 library(stargazer)
 
-# Specialty Packages
+# Specialty/Stats Packages
 library(icd9)
+library(ROCR)
+library(lme4)
 ```
 
 ```{r constants.functions}
@@ -73,20 +75,30 @@ prettyMedianIQR <- function (x,y) {
 
 # Load lite dataset (sample of 100,000 obs)
 load(file="rao_workingdata/ptlite.rda")
-pt <- pt[year(pt$admtdate)>2005,] # take out after next run of main data
+
+# make a disease specific cohort based on the parameter selected
+# params <- list(); params$cohort="Cystectomy"
+ptgucohort <- ptgu %>% filter(cohort==params$cohort)
+
+# split data into training and validation cohorts
+set.seed(7)
+train_ind <- sample(seq_len(nrow(ptgucohort)), size = nrow(ptgucohort)*.75)
+train <- ptgucohort[train_ind,]
+test <- ptgucohort[-train_ind,]
 ```
 
 # Overall Summary
 - Total Records: `r nrow(pt)`
 - Records in GU specific cohort `r nrow(ptgu)`
+- `r kable(t(table(ptgu$cohort)))`
 
-```{r fields, cache=F}
-datatable(as.data.frame(names(pt)))
+```{r datafields, cache=F, results='asis'}
+names(ptgucohort)
 ```
 
-# Admission Dates
+## Admission Dates
 Overall Cohort
-```{r}
+```{r overallCohortAdmissionDates}
 pt %>%
   ggplot(aes(x=admtdate)) + 
   geom_histogram(fill=main2, color="white") + 
@@ -100,7 +112,7 @@ pt %>%
 ```
 
 Overall GU Cohort
-```{r}
+```{r overallGuCohortAdmissionDates}
 kable(t(table(ptgu$cohort)))
 
 ptgu %>%
@@ -117,19 +129,19 @@ ptgu %>%
        x="Admission Date")
 ```
 
-# Readmissions
+## Readmissions
 Overall 30 day Readmission Rate (%)
-```{r, results="asis"}
-t1 <- round(100*prop.table(table(pt$isreadmit)),2)
-t2 <- round(100*prop.table(table(ptgu$isreadmit, ptgu$cohort),2),2)
+```{r overall30dReadmissionRate, results="asis"}
+t1 <- round(100*prop.table(table(pt$isreadmit30adm)),2)
+t2 <- round(100*prop.table(table(ptgu$isreadmit30adm, ptgu$cohort),2),2)
 t <- as.data.frame(cbind(t1, t2))
 colnames(t)[1] <- "All Patients"
 stargazer(t, summary=F, type="html", digits = 2)
 ```
 
-# Disposition
+## Disposition
 Overall Disposition Distribution (%)
-```{r, results="asis"}
+```{r overallDispo, results="asis"}
 t1 <- round(100*prop.table(table(pt$disp)), 2)
 t2 <- round(100*prop.table(table(ptgu$disp, ptgu$cohort),2),2)
 
@@ -138,9 +150,9 @@ colnames(t)[1] <- "All Patients"
 stargazer(t, summary=F, type="html", digits = 2, digits.extra = 2)
 ```
 
-# Race/Ethnicity
+## Race/Ethnicity
 (%)
-```{r, results="asis"}
+```{r overallRace, results="asis"}
 t1 <- round(100*prop.table(table(pt$race_grp)), 2)
 t2 <- round(100*prop.table(table(ptgu$race_grp, ptgu$cohort),2),2)
 
@@ -149,9 +161,9 @@ colnames(t)[1] <- "All Patients"
 stargazer(t, summary=F, type="html", digits = 2, digits.extra = 2)
 ```
 
-# Payers
+## Payers
 Payer Category (%)
-```{r, results="asis"}
+```{r overallPayers, results="asis"}
 t1 <- round(100*prop.table(table(pt$pay_cat)), 2)
 t2 <- round(100*prop.table(table(ptgu$pay_cat, ptgu$cohort),2),2)
 
@@ -171,7 +183,141 @@ colnames(t)[1] <- "All Patients"
 stargazer(t, summary=F, type="html")
 ```
 
-```{r}
+# `r params$cohort` Summary
+- Records in `r params$cohort` specific cohort: `r nrow(ptgucohort)`
+- For modeling, data split 75/25 into training (n=`r nrow(train)`) and testing (n=`r nrow(test)`) cohorts
 
+# Models
+
+## Baseline Log Model
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex
+
+```{r logmodel1}
+m1 <- glm(isreadmit30dc ~ agyradmcentered + sex, data=train, family="binomial")
+
+summary(m1)
+
+kable(exp(cbind(OR = coef(m1), confint(m1))))
 ```
 
+Predicted Probability of Readmission
+```{r logmodel1preds}
+# Generate dataframe of dummy values to calculate predicted probabilities
+newm1 <- data.frame(
+  agyradmcentered = rep(seq(from=1.8, to=10, length.out = 100),2), 
+  sex=factor(c(rep("Male",100), rep("Female",100))))
+
+p1 <- cbind(newm1,predict(m1, newdata = newm1, type="link", se=T))
+p1 <- within(p1, {
+    PredictedProb <- plogis(fit)
+    LL <- plogis(fit - (1.96 * se.fit))
+    UL <- plogis(fit + (1.96 * se.fit))
+})
+
+ggplot(p1, aes(x = agyradmcentered*10, y = PredictedProb)) + 
+  geom_ribbon(aes(ymin = LL, ymax = UL, fill = sex), alpha = 0.1) + 
+  geom_line(aes(colour = sex), size = 1) + 
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), 
+        legend.background= element_rect(fill=bg), 
+        legend.title=element_blank())
+```
+
+Model Performance
+```{r logmodel1performance, results="asis"}
+# predict test data result
+pr1 <- predict(m1, newdata=test, type="response")
+
+pred1 <- prediction(pr1, test$isreadmit30dc)
+
+# Calculate AUC
+auc1 <- performance(pred1, measure="auc")
+auc1 <- round(auc1@y.values[[1]],4)
+
+# Generate ROC Curve
+roc1 <- performance(pred1, measure="tpr", x.measure="fpr")
+plot(roc1, colorize=T)
+
+cat("AUC:", auc1)
+```
+
+## Log w Elixhauser Sum
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+
+```{r logmodel2}
+m2 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum, data=train, family="binomial")
+
+summary(m2)
+
+kable(exp(cbind(OR = coef(m2), confint(m2))))
+```
+
+Predicted Probability of Readmission
+```{r logmodel2preds}
+# TO DO pending what constants/axes we use for prediction
+```
+
+Model Performance
+```{r logmodel2performance, results="asis"}
+# predict test data result
+pr2 <- predict(m2, newdata=test, type="response")
+
+pred2 <- prediction(pr2, test$isreadmit30dc)
+
+# Calculate AUC
+auc2 <- performance(pred2, measure="auc")
+# Print results of AUC
+auc2 <- round(auc2@y.values[[1]],4)
+
+# Generate ROC Curve
+roc2 <- performance(pred2, measure="tpr", x.measure="fpr")
+plot(roc2, colorize=T)
+cat("AUC:",auc2)
+```
+
+## Log w Elixhauser Index
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Index (30 Categorical Vars)
+
+```{r logmodel3}
+fmla <- as.formula(paste("isreadmit30dc ~ agyradmcentered + sex +", paste(elixComorbidNamesAbbrev, collapse="+")))
+
+print(fmla)
+
+m3 <- glm(fmla, data=train, family="binomial")
+
+summary(m3)
+
+kable(exp(cbind(OR = coef(m3), confint(m3))))
+```
+
+Predicted Probability of Readmission
+```{r logmodel3preds}
+# TO DO pending what constants/axes we use for prediction
+```
+
+Model Performance
+```{r logmodel3performance, results="asis"}
+# predict test data result
+pr3 <- predict(m3, newdata=test, type="response")
+
+pred3 <- prediction(pr3, test$isreadmit30dc)
+
+# Calculate AUC
+auc3 <- performance(pred3, measure="auc")
+# Print results of AUC
+auc3 <- round(auc3@y.values[[1]],4)
+
+# Generate ROC Curve
+roc3 <- performance(pred3, measure="tpr", x.measure="fpr")
+plot(roc3, colorize=T)
+cat("AUC:",auc3)
+```
+
+
+```{r}
+## tabulate observed readmissions in test set
+## compare training to test (AUC?)
+```

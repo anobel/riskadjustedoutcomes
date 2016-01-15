@@ -126,8 +126,9 @@ pt <- pt %>% filter(disp!="Invalid")
 # Sex
 # Keep only male/female categories
 pt <- pt %>% filter(sex<3)
+# factor sex variable
 pt$sex <- factor(pt$sex, levels=1:2, labels=c("Male", "Female"))
-t <- pt %>% filter(sex=="Male"|sex=="Female")
+
 # Age
 # To prep for analysis, set age 18 as the baseline (0), and divide by 10 for ease of interpretation
 pt$agyradmcentered <- (pt$agyradm-18)/10
