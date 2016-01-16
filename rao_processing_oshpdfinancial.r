@@ -4,7 +4,6 @@ library(dplyr)
 
 # Load OHSPD Hospital Data to use as Crosswalk to Medicare ID
 # From http://www.oshpd.ca.gov/hid/Products/Hospitals/AnnFinanData/SubSets/SelectedData/default.asp
-
 # Load data from 2007-2011 (in case there are new faciliteis or old ones removed)
 
 # Import OSHPD data into a list of dataframes
@@ -17,9 +16,15 @@ colnames(oshpdfinance) <- str_to_lower(names(oshpdfinance))
 oshpdxwalk <- oshpdfinance %>%
   select(oshpd_id = fac_no, fac_name, providerid = mcar_pro.) %>%
   mutate(oshpd_id = str_sub(oshpd_id,4,9)) %>%
+  mutate(providerid = str_replace(providerid, "-","")) %>%
   group_by(oshpd_id) %>%
-  distinct(oshpd_id)
+  distinct(oshpd_id) %>%
+  as.data.frame()
+
+oshpdxwalk$oshpd_id <- as.numeric(oshpdxwalk$oshpd_id)
+oshpdxwalk$providerid <- as.numeric(oshpdxwalk$providerid)
 
 save(oshpdxwalk, file="rao_workingdata/oshpdxwalk.rda")
 
 rm(oshpdfinance, oshpdxwalk)
+
