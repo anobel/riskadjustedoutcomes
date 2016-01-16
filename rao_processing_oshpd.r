@@ -472,14 +472,9 @@ pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort
 
 # Checkpoint
 # setwd("/Users/anobel/Documents/code/rao/")
-# save(pt, cohort, file="rao_workingdata/pt.rda")
+save(pt, cohort, file="rao_workingdata/pt.rda")
 
-# Make smaller subset of all patients and also GU specific cohort
-# ptgu <- pt[!is.na(pt$cohort),]
-# ptgu <- ptgu[ptgu$cohort!="Multiple GU Sx",]
-# ptgu <- droplevels(ptgu)
-# pt <- pt %>% ungroup() %>% sample_n(100000, replace=F) %>% droplevels()
-# save(pt, ptgu, file="rao_workingdata/ptlite.rda")
+# Once complete, run rao_processing_all.r to combine with other datasets
 
 # Misc
 # to get listing of ICD9 descriptions for each patient
