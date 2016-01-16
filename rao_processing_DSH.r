@@ -6,7 +6,7 @@ library(dplyr)
 # Import Medicare DSH data into separate dataframes
 # did this as individual calls because the column names/numbers are different, so cant do regular rbind
 # Import DSH data into a list of dataframes
-dsh <- apply(data.frame(paste("rao_originaldata/medicare_dsh/",list.files("rao_originaldata/medicare_dsh/"),sep="")), 1, FUN=read.csv, header=TRUE, stringsAsFactors=FALSE)
+dsh <- apply(data.frame(paste("rao_originaldata/medicare_dsh/",list.files("rao_originaldata/medicare_dsh/"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
 
 # This is a list of variables I want to keep 
 dvars <- c("Provider.Number", "Name", "BEDS", "ADC", "Average.Daily.Census", "DSHPCT", "URGEO", "DSHOPG", "DSHCPG", "MCR_PCT", "^CMI")
@@ -71,8 +71,6 @@ dsh <- dsh[!is.na(dsh$providerid),]
 dsh <- dsh[dsh$providerid>49999 & dsh$providerid<51000,]
 
 #convert column types
-dsh$providerid <- as.factor(dsh$providerid)
-dsh$name <- as.factor(dsh$name)
 dsh$urban <- as.factor(dsh$urban)
 dsh$adc <- as.numeric(dsh$adc)
 dsh$mcr_pct <- as.numeric(dsh$mcr_pct)
