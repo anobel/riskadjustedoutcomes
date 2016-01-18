@@ -48,6 +48,8 @@ dshmeans <- dsh %>%
 pt <- pt %>%
   left_join(dshmeans)
 
+rm(dsh, dshmeans)
+
 # Save as an RDS so its easier to reload into different named objects
 saveRDS(pt, file="rao_workingdata/ptcombined.rds")
 

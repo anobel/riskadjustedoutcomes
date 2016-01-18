@@ -25,13 +25,25 @@ oshpdxwalk <- oshpdfinance %>%
   # select just the distinct OSHPD IDs
   distinct(oshpd_id) %>%
   # Drop fields with OSHPD ID listed as NA
-  filter(!is.na(oshpd_id) & !is.na(providerid)) %>%
+  filter(!is.na(oshpd_id)) %>%
   as.data.frame()
 
 oshpdxwalk$oshpd_id <- as.numeric(oshpdxwalk$oshpd_id)
 oshpdxwalk$providerid <- as.numeric(oshpdxwalk$providerid)
 
+# some Provider IDs are missing in the OSHPD data
+# write.csv(oshpdxwalk %>% filter(is.na(providerid)), file="rao_workingdata/oshpdidmedicareblank.csv", row.names = F)
+# most of them are Mental Health Facilities and Substance Rehab facilities
+# Will have to manually enter Medicare IDs for certain hospitals (some Kaisers, and Scripps)
+oshpdxwalk$providerid[oshpdxwalk$oshpd_id==74097] <- 50760
+oshpdxwalk$providerid[oshpdxwalk$oshpd_id==10858] <- 50512
+oshpdxwalk$providerid[oshpdxwalk$oshpd_id==410806] <- 50070
+oshpdxwalk$providerid[oshpdxwalk$oshpd_id==484044] <- 50767
+oshpdxwalk$providerid[oshpdxwalk$oshpd_id==480989] <- 50073
+oshpdxwalk$providerid[oshpdxwalk$oshpd_id==371256] <- 50424
+oshpdxwalk$providerid[oshpdxwalk$oshpd_id==314024] <- 50772
+oshpdxwalk$providerid[oshpdxwalk$oshpd_id==13619] <- 50773
 save(oshpdxwalk, file="rao_workingdata/oshpdxwalk.rda")
 
+write.csv(oshpdxwalk %>% filter(is.na(providerid)), file="rao_workingdata/oshpdidmedicareblank.csv", row.names = F)
 rm(oshpdfinance, oshpdxwalk)
-
