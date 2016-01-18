@@ -472,7 +472,8 @@ pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort
 
 # Checkpoint
 # setwd("/Users/anobel/Documents/code/rao/")
-save(pt, cohort, file="rao_workingdata/pt.rda")
+save(pt, file="rao_workingdata/pt.rda")
+save(cohort, file="rao_workingdata/cohort.rda")
 
 # Once complete, run rao_processing_all.r to combine with other datasets
 

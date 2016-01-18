@@ -1,3 +1,4 @@
+library(plyr)
 library(stringr)
 library(tidyr)
 library(dplyr)
@@ -9,16 +10,22 @@ library(dplyr)
 # Import OSHPD data into a list of dataframes
 oshpdfinance <- apply(data.frame(paste("rao_originaldata/oshpd_financialdata/",list.files("rao_originaldata/oshpd_financialdata/"),sep="")), 1, FUN=read.csv, na.strings=c(""), header=T, stringsAsFactors=F)
 
-# row binds all the dataframes in the list into one frame. rbind.fill from plyr
+# Row binds all the dataframes in the list into one frame. rbind.fill from plyr
 oshpdfinance <- do.call(rbind.fill, oshpdfinance)
 colnames(oshpdfinance) <- str_to_lower(names(oshpdfinance))
 
+# select just the facility number (OSHPD ID), name, and Medicare Provider ID
 oshpdxwalk <- oshpdfinance %>%
   select(oshpd_id = fac_no, fac_name, providerid = mcar_pro.) %>%
-  mutate(oshpd_id = str_sub(oshpd_id,4,9)) %>%
+  # remove the first 3 numbers from all fields, all are 106 and not part of OSHPD ID
+  mutate(oshpd_id = str_sub(oshpd_id,4,9)) %>% 
+  # remove intervening - from medicare ID
   mutate(providerid = str_replace(providerid, "-","")) %>%
   group_by(oshpd_id) %>%
+  # select just the distinct OSHPD IDs
   distinct(oshpd_id) %>%
+  # Drop fields with OSHPD ID listed as NA
+  filter(!is.na(oshpd_id) & !is.na(providerid)) %>%
   as.data.frame()
 
 oshpdxwalk$oshpd_id <- as.numeric(oshpdxwalk$oshpd_id)
