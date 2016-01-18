@@ -13,7 +13,7 @@ params:
 ---
 
 ```{r global_options, include=FALSE}
-knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=F)
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=T)
 ```
 
 <!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
@@ -71,20 +71,33 @@ prettyMedianIQR <- function (x,y) {
 ```{r loaddata}
 # Load full dataset (12.5m obs)
 # when loading the full data set, in chunk options set cache.lazy=F
-# load(file="rao_workingdata/pt.rda")
+# pt <- readRDS(file="rao_workingdata/pt.rds")
 
 # Load lite dataset (sample of 100,000 obs)
-load(file="rao_workingdata/ptlite.rda")
+ptgu <- readRDS("rao_workingdata/ptgu.rds")
 
 # make a disease specific cohort based on the parameter selected
 # params <- list(); params$cohort="Cystectomy"
 ptgucohort <- ptgu %>% filter(cohort==params$cohort)
 
 # split data into training and validation cohorts
+# Set random seed to reproduce results
 set.seed(7)
-train_ind <- sample(seq_len(nrow(ptgucohort)), size = nrow(ptgucohort)*.75)
-train <- ptgucohort[train_ind,]
-test <- ptgucohort[-train_ind,]
+
+# create an index variable which will allow splitting of training/test data without overlap
+ptgucohort$index <- seq(1:nrow(ptgucohort))
+
+# Group by OSHPD_ID, then take a 75% sample for training set
+train <- ptgucohort %>%
+  group_by(oshpd_id) %>%
+  sample_frac(size=0.75, replace=F)
+# anything that didnt make it into training set is put into a test set
+test <- ptgucohort[!(ptgucohort$index %in% train$index),]
+
+# remove index variables
+ptgucohort <- ptgucohort %>% select(-index)
+train <- train %>% select(-index)
+test <- test %>% select(-index)
 ```
 
 # Overall Summary
@@ -316,8 +329,175 @@ plot(roc3, colorize=T)
 cat("AUC:",auc3)
 ```
 
+## Log Elixhauser, Hospital
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Index (30 Categorical Vars), Hospital ID as fixed effect
+Turns out this doesnt work due to a large number of hospitals (170), leading to 170 dummy variables.
+We're able to create a model, but unable to determine any predicted probabilities beacuse not all hospitals are present in both training and testing data sets.
+
+```{r logmodel4}
+# ptgucohort$oshpd_id <- factor(ptgucohort$oshpd_id)
+# 
+# fmla <- as.formula(paste("isreadmit30dc ~ agyradmcentered + sex + oshpd_id +", paste(elixComorbidNamesAbbrev, collapse="+")))
+# 
+# print(fmla)
+# 
+# m4 <- glm(fmla, data=train, family="binomial")
+# 
+# summary(m4)
+
+# kable(exp(cbind(OR = coef(m3), confint(m3))))
+```
+
+Predicted Probability of Readmission
+```{r logmodel4preds}
+# TO DO pending what constants/axes we use for prediction
+```
+
+Model Performance
+```{r logmodel4performance, results="asis"}
+# pr4 <- predict(m4, data=test, type="response")
+# 
+# pred4 <- prediction(pr4, test$isreadmit30dc)
+# 
+# # Calculate AUC
+# auc3 <- performance(pred3, measure="auc")
+# # Print results of AUC
+# auc3 <- round(auc3@y.values[[1]],4)
+# 
+# # Generate ROC Curve
+# roc3 <- performance(pred3, measure="tpr", x.measure="fpr")
+# plot(roc3, colorize=T)
+# cat("AUC:",auc3)
+```
+
+## Log ME Base
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Hospital as random effect
+
+```{r logMEmodel1}
+me1 <- glmer(isreadmit30dc ~ agyradmcentered + sex + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me1)
+
+# Calculate confidence intervals and odds ratios
+me1ci <- confint(me1, parm = "beta_")
+kable(exp(cbind(OR=fixef(me1), me1ci)))
+```
+
+Predicted Probability of Readmission
+```{r logMEmodel1preds}
+# TO DO pending what constants/axes we use for prediction```
+```
+
+Model Performance
+```{r logMEmodel1performance, results="asis"}
+# predict test data result
+pr1 <- predict(me1, newdata=test, allow.new.levels=T)
+
+pred1 <- prediction(pr1, test$isreadmit30dc)
+
+# Calculate AUC
+auc1 <- performance(pred1, measure="auc")
+auc1 <- round(auc1@y.values[[1]],4)
+
+# Generate ROC Curve
+roc1 <- performance(pred1, measure="tpr", x.measure="fpr")
+plot(roc1, colorize=T)
+
+cat("AUC:", auc1)
+```
+
+## Log ME Elix Sum
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum. Hospital as random effect.
+
+```{r logMEmodel2}
+me2 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me2)
+
+# Calculate confidence intervals and odds ratios
+me2ci <- confint(me2, parm = "beta_")
+kable(exp(cbind(OR=fixef(me2), me2ci)))
+```
+
+Predicted Probability of Readmission
+```{r logMEmodel2preds}
+# TO DO pending what constants/axes we use for prediction```
+```
+
+Model Performance
+```{r logMEmodel2performance, results="asis"}
+# predict test data result
+pr2 <- predict(me2, newdata=test, allow.new.levels=T)
+
+pred2 <- prediction(pr2, test$isreadmit30dc)
+
+# Calculate AUC
+auc2 <- performance(pred2, measure="auc")
+auc2 <- round(auc2@y.values[[1]],4)
+
+# Generate ROC Curve
+roc2 <- performance(pred2, measure="tpr", x.measure="fpr")
+plot(roc2, colorize=T)
+
+cat("AUC:", auc1)
+```
+
+## Log ME Elix Sum
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Index Categories. Hospital as random effect.
+
+```{r logMEmodel3}
+fmla <- as.formula(paste("isreadmit30dc ~ agyradmcentered + sex +", paste(elixComorbidNamesAbbrev, collapse="+"), " + (1 | oshpd_id)"))
+
+print(fmla)
+
+me3 <- glmer(fmla, data=train, family="binomial")
+
+# print raw results of regression
+summary(me3)
+
+# Calculate confidence intervals and odds ratios
+# me3ci <- confint(me3, parm = "beta_")
+kable(as.data.frame((OR=exp(fixef(me3)))))
+cat("confidence intervals dont converge")
+```
+
+Predicted Probability of Readmission
+```{r logMEmodel3preds}
+# TO DO pending what constants/axes we use for prediction```
+```
+
+Model Performance
+```{r logMEmodel3performance, results="asis"}
+# predict test data result
+pr3 <- predict(me3, newdata=test, allow.new.levels=T)
+
+pred3 <- prediction(pr3, test$isreadmit30dc)
+
+# Calculate AUC
+auc3 <- performance(pred3, measure="auc")
+auc3 <- round(auc3@y.values[[1]],4)
+
+# Generate ROC Curve
+roc3 <- performance(pred3, measure="tpr", x.measure="fpr")
+plot(roc3, colorize=T)
+
+cat("AUC:", auc3)
+```
 
 ```{r}
+# add models with hospital as fixed effect
 ## tabulate observed readmissions in test set
 ## compare training to test (AUC?)
+
+load("rao_workingdata/acs.rda")
+ptgucohort<- ptgucohort %>% 
+  left_join(acsz, by = c("patzcta" = "zcta"))
+
+load("rao_workingdata/dsh.rda")
 ```
