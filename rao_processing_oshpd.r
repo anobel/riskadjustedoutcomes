@@ -479,9 +479,13 @@ pt <- pt %>%
   summarise(volume = n()/years) %>%
   filter(!is.na(cohort)) %>%
   group_by(cohort) %>%
-  mutate(quintile = ntile(volume, 5)
+  mutate(volumequint = ntile(volume, 5)
   ) %>%
   right_join(pt)
+
+# save quintiles as factor variable
+pt$volumequint <- factor(pt$volumequint)
+
 rm(years)  
 
 # Checkpoint

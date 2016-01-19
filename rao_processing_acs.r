@@ -167,7 +167,7 @@ acsz<- as.data.frame(cbind(zcta=acs[,1],scale(acs[,c(2:length(acs))], center=T, 
 acs$hoodzscore <- rowSums(cbind(acsz$medianincomelog, acsz$housevalue, acsz$capincome, acsz$eduhs, acsz$educollege, acsz$empexec), na.rm=T)
 
 # Assign quintiles
-acs$hoodquint <- ntile(acs$hoodzscore, 5)
+acs$hoodquint <- factor(ntile(acs$hoodzscore, 5))
 
 # Create centered and scaled variables, useful for regression interpretation
 # Zip code population for every 10,000 people
