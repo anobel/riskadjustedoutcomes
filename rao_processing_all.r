@@ -57,6 +57,7 @@ acs <- readRDS(file="rao_workingdata/acs.rds")
 # Merge pt data with ACS data
 pt <- pt %>%
   left_join(acs, by=c("patzcta" = "zcta"))
+rm(acs)
 
 # Save as an RDS so its easier to reload into different named objects
 saveRDS(pt, file="rao_workingdata/ptcombined.rds")
@@ -72,3 +73,4 @@ saveRDS(ptgu, file="rao_workingdata/ptgu.rds")
 # Make a subsample of 100k and save as a smaller dataset
 ptlite <- pt %>% ungroup() %>% sample_n(100000, replace=F) %>% droplevels()
 saveRDS(ptlite, file="rao_workingdata/ptlite.rds")
+rm(ptlite)

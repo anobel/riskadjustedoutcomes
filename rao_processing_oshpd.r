@@ -485,14 +485,13 @@ pt <- pt %>%
 
 # save quintiles as factor variable
 pt$volumequint <- factor(pt$volumequint)
-
 rm(years)  
 
 # Checkpoint
 # setwd("/Users/anobel/Documents/code/rao/")
 saveRDS(pt, file="rao_workingdata/pt.rds")
 saveRDS(cohort, file="rao_workingdata/cohort.rds")
-
+rm(cohort, codes, diags, procs, icd9detail)
 # Once complete, run rao_processing_all.r to combine with other datasets
 
 # Misc
