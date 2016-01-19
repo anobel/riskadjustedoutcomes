@@ -409,6 +409,160 @@ summary(me9)
 rocResult(me9)
 ```
 
+## ME Elix Sum, Income
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Median Income
+- Random Effect: Hospital
+
+```{r MEmodel10}
+me10 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + medianincome1k + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me10)
+rocResult(me10)
+```
+
+## ME Elix Sum, Home Value
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Median Home Value
+- Random Effect: Hospital
+
+```{r MEmodel11}
+me11 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + housevalue100k + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me11)
+rocResult(me11)
+```
+
+## ME Elix Sum, Edu(NoHS)
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Education (% that did not complete HS)
+- Random Effect: Hospital
+
+```{r MEmodel12}
+me12 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + edunohs + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me12)
+rocResult(me12)
+```
+
+## ME Elix Sum, Edu(No College)
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Education (% that did not complete College)
+- Random Effect: Hospital
+
+```{r MEmodel13}
+me13 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + eduhs + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me13)
+rocResult(me13)
+```
+
+## ME Elix Sum, Edu(College)
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Education (% that did complete College)
+- Random Effect: Hospital
+
+```{r MEmodel14}
+me14 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + educollege + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me14)
+rocResult(me14)
+```
+
+## ME Elix Sum, Employment
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: % Employed in Executive Positions
+- Random Effect: Hospital
+
+```{r MEmodel15}
+me15 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + empexec + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me15)
+rocResult(me15)
+```
+
+## ME Elix Sum, GINI
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: GINI Coefficient of Inequality
+- Random Effect: Hospital
+
+```{r MEmodel16}
+me16 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + gini + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me16)
+rocResult(me16)
+```
+
+## ME Elix Sum, ICE Income
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Index for Concentration at the Extremes for Income
+- Random Effect: Hospital
+
+```{r MEmodel17}
+me17 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + iceinc + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me17)
+rocResult(me17)
+```
+
+## ME Elix Sum, ICE Education
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Index for Concentration at the Extremes for Education
+- Random Effect: Hospital
+
+```{r MEmodel18}
+me18 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + iceedu + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me18)
+rocResult(me18)
+```
+
+## ME Elix Sum, ICE Ethnicity
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Index for Concentration at the Extremes for Ethnicity
+- Random Effect: Hospital
+
+```{r MEmodel19}
+me19 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + iceeth + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me19)
+rocResult(me19)
+```
+
+## ME Elix Sum, ICE (all)
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Index for Concentration at the Extremes for Income, Ethnicity, Education
+- Random Effect: Hospital
+
+```{r MEmodel20}
+me20 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + iceinc + iceedu + iceeth + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me20)
+rocResult(me20)
+```
+
 ```{r}
 # add models with hospital as random effect
 
