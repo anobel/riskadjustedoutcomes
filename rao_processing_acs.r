@@ -192,6 +192,3 @@ acs <- acs %>%
 
 # Save into RDS
 saveRDS(acs, file="rao_workingdata/acs.rds")
-
-
-

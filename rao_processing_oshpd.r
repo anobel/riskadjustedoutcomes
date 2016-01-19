@@ -470,10 +470,24 @@ pt$cohort[cohort$SxRP>0 & cohort$DxProstateCa>0 & cohort$DxKidneyCa>0 & (cohort$
 # Testis and Kidney cancer, RPLND and Radical or Partial Nx
 pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0) & pt$sex!="Male"] <- "Multiple GU Sx"
 
+# Calculate mean annual number of procedures per hospital for each category, and assign quintiles
+# generate years variable, which counts number of years of data included
+# It is 5, but in case we include additional data in future
+years <- as.numeric(difftime(max(pt$dschdate), min(pt$dschdate))/365)
+pt <- pt %>%
+  group_by(oshpd_id, cohort) %>%
+  summarise(volume = n()/years) %>%
+  filter(!is.na(cohort)) %>%
+  group_by(cohort) %>%
+  mutate(quintile = ntile(volume, 5)
+  ) %>%
+  right_join(pt)
+rm(years)  
+
 # Checkpoint
 # setwd("/Users/anobel/Documents/code/rao/")
-save(pt, file="rao_workingdata/pt.rda")
-save(cohort, file="rao_workingdata/cohort.rda")
+saveRDS(pt, file="rao_workingdata/pt.rds")
+saveRDS(cohort, file="rao_workingdata/cohort.rds")
 
 # Once complete, run rao_processing_all.r to combine with other datasets
 

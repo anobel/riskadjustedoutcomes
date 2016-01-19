@@ -43,7 +43,7 @@ oshpdxwalk$providerid[oshpdxwalk$oshpd_id==480989] <- 50073
 oshpdxwalk$providerid[oshpdxwalk$oshpd_id==371256] <- 50424
 oshpdxwalk$providerid[oshpdxwalk$oshpd_id==314024] <- 50772
 oshpdxwalk$providerid[oshpdxwalk$oshpd_id==13619] <- 50773
-save(oshpdxwalk, file="rao_workingdata/oshpdxwalk.rda")
 
-write.csv(oshpdxwalk %>% filter(is.na(providerid)), file="rao_workingdata/oshpdidmedicareblank.csv", row.names = F)
+saveRDS(oshpdxwalk, file="rao_workingdata/oshpdxwalk.rds")
+
 rm(oshpdfinance, oshpdxwalk)
