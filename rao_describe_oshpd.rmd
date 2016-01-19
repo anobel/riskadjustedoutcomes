@@ -88,7 +88,7 @@ rocResult <- function (x) {
 
 # Load lite dataset (sample of 100,000 obs)
 ptgu <- readRDS("rao_workingdata/ptgu.rds")
-
+ptgu$volumeprop = ptgu$volume/ptgu$adcMean
 # make a disease specific cohort based on the parameter selected
 # params <- list(); params$cohort="Cystectomy"
 ptgucohort <- ptgu %>% filter(cohort==params$cohort)
@@ -291,7 +291,7 @@ summary(me1)
 rocResult(me1)
 ```
 
-## ME Elix Sum
+## Elix Sum
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum. Hospital as random effect.
 
@@ -303,7 +303,7 @@ summary(me2)
 rocResult(me2)
 ```
 
-## ME Elix Index
+## Elix Index
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Index Categories. Hospital as random effect.
 
@@ -318,7 +318,7 @@ rocResult(me3)
 ```
 
 # ME with SES
-## ME Elix Sum, HoodZ
+## Elix Sum, HoodZ
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Neighborhood Z-Score (continuous)
@@ -332,7 +332,7 @@ summary(me4)
 rocResult(me4)
 ```
 
-## ME Elix Sum, HoodZ Quintile
+## Elix Sum, HoodZ Quintile
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Neighborhood Z-Score (quintile)
@@ -346,7 +346,7 @@ summary(me5)
 rocResult(me5)
 ```
 
-## ME Elix Index, HoodZ
+## Elix Index, HoodZ
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Index Categories
 - SES: Neighborhood Z-Score 
@@ -362,7 +362,7 @@ summary(me6)
 rocResult(me6)
 ```
 
-## ME Elix Index, HoodZ Quintile
+## Elix Index, HoodZ Quintile
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Index Categories
 - SES: Neighborhood Z-Score Quintile
@@ -381,7 +381,7 @@ rocResult(me7)
 
 # ME w SES Categories
 
-## ME Elix Sum, Eth(White)
+## Elix Sum, Eth(White)
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Ethnicity (% White)
@@ -395,7 +395,7 @@ summary(me8)
 rocResult(me8)
 ```
 
-## ME Elix Sum, Eth(AfAm)
+## Elix Sum, Eth(AfAm)
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Ethnicity (% African American)
@@ -409,7 +409,7 @@ summary(me9)
 rocResult(me9)
 ```
 
-## ME Elix Sum, Income
+## Elix Sum, Income
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Median Income
@@ -423,7 +423,7 @@ summary(me10)
 rocResult(me10)
 ```
 
-## ME Elix Sum, Home Value
+## Elix Sum, Home Value
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Median Home Value
@@ -437,7 +437,7 @@ summary(me11)
 rocResult(me11)
 ```
 
-## ME Elix Sum, Edu(NoHS)
+## Elix Sum, Edu(NoHS)
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Education (% that did not complete HS)
@@ -451,7 +451,7 @@ summary(me12)
 rocResult(me12)
 ```
 
-## ME Elix Sum, Edu(No College)
+## Elix Sum, Edu(No College)
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Education (% that did not complete College)
@@ -465,7 +465,7 @@ summary(me13)
 rocResult(me13)
 ```
 
-## ME Elix Sum, Edu(College)
+## Elix Sum, Edu(College)
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Education (% that did complete College)
@@ -479,7 +479,7 @@ summary(me14)
 rocResult(me14)
 ```
 
-## ME Elix Sum, Employment
+## Elix Sum, Employment
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: % Employed in Executive Positions
@@ -493,7 +493,7 @@ summary(me15)
 rocResult(me15)
 ```
 
-## ME Elix Sum, GINI
+## Elix Sum, GINI
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: GINI Coefficient of Inequality
@@ -507,7 +507,7 @@ summary(me16)
 rocResult(me16)
 ```
 
-## ME Elix Sum, ICE Income
+## Elix Sum, ICE Income
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Index for Concentration at the Extremes for Income
@@ -521,7 +521,7 @@ summary(me17)
 rocResult(me17)
 ```
 
-## ME Elix Sum, ICE Education
+## Elix Sum, ICE Education
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Index for Concentration at the Extremes for Education
@@ -535,7 +535,7 @@ summary(me18)
 rocResult(me18)
 ```
 
-## ME Elix Sum, ICE Ethnicity
+## Elix Sum, ICE Ethnicity
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Index for Concentration at the Extremes for Ethnicity
@@ -549,7 +549,7 @@ summary(me19)
 rocResult(me19)
 ```
 
-## ME Elix Sum, ICE (all)
+## Elix Sum, ICE (all)
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Index for Concentration at the Extremes for Income, Ethnicity, Education
@@ -563,9 +563,109 @@ summary(me20)
 rocResult(me20)
 ```
 
-```{r}
-# add models with hospital as random effect
+# ME with Hosp Factors
+## Elix Sum, Volume
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: None
+- Random Effect: Hospital, Hospital `r params$cohort` volume
 
+```{r MEmodel21}
+me21 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + volume + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me21)
+rocResult(me21)
+```
+
+## Elix Sum, Volume Quintile
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: None
+- Random Effect: Hospital, Hospital `r params$cohort` volume quintile
+
+```{r MEmodel22}
+me22 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum  + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me22)
+rocResult(me22)
+```
+
+## Elix Sum, Hospital Beds
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: None
+- Random Effect: Hospital, Hospital size (beds)
+
+```{r MEmodel23}
+me23 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + bedsMean + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me23)
+rocResult(me23)
+```
+
+## Elix Sum, Average Daily Census
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: None
+- Random Effect: Hospital, Average Daily Census
+
+```{r MEmodel24}
+me24 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + adcMean + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me24)
+rocResult(me24)
+```
+
+## Elix Sum, Medicare DSH
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: None
+- Random Effect: Hospital, Disproportionate Share Index
+
+```{r MEmodel25}
+me25 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + dsh_pctMean + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me25)
+rocResult(me25)
+```
+
+## Elix Sum, Medicare %
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: None
+- Random Effect: Hospital, Medicare Patient Percentage
+
+```{r MEmodel26}
+me26 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + mcr_pctMean + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me26)
+rocResult(me26)
+```
+
+## Elix Sum, Case Mix
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: None
+- Random Effect: Hospital, Case Mix Index
+
+```{r MEmodel27}
+me27 <- glmer(isreadmit30dc ~ agyradmcentered + sex + elixsum + cmiMean + (1 | oshpd_id), data=train, family="binomial")
+
+# print raw results of regression
+summary(me27)
+rocResult(me27)
+me27ci <- confint(me27, parm = "beta_")
+kable(exp(cbind(OR=fixef(me27), me27ci)))
+```
+
+
+```{r}
 # Misc Code
 # Calculate confidence intervals and odds ratios for log fixed effects models
 # kable(exp(cbind(OR = coef(m2), confint(m2))))
