@@ -2,7 +2,11 @@ library(plyr)
 library(stringr)
 library(dplyr)
 
-# Zip Code Data from: https://ruralhealth.und.edu/ruca
+
+# ZIP code level RUCAs developed by University of Washington, in collaboration with
+# USDA Economic Research Service and HRSA Office of Rural Health Policy 
+# http://depts.washington.edu/uwruca/index.php
+# ZIP/ZCTA obtained from: https://ruralhealth.und.edu/ruca
 ru <- read.csv("rao_originaldata/RUCA/final310.csv", header=T, stringsAsFactors = T)
 
 # load zipcode/ZCTA file
@@ -24,4 +28,4 @@ ru <- ru %>%
   select(-zip) %>%
   distinct(zcta)
 
-save(ru, file="rao_workingdata/rural.rda")
+saveRDS(ru, file="rao_workingdata/rural.rds")
