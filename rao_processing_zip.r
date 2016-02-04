@@ -1,6 +1,6 @@
-library(reshape2)
 library(stringr)
 library(dplyr)
+library(RCurl)
 
 # import zip to ZCTA crosswalk
 # obtained from From the Bureau of Primary Health Care
@@ -18,4 +18,30 @@ zcta <- zcta %>%
   select(zip, zcta_use)
 
 colnames(zcta) <- c("zip", "zcta")
-save(zcta, file="rao_workingdata/zcta.rda")
+
+# Download ZCTA Lat/Lon from US Census Gazetteer
+# create temp file and download zip file from census
+temp <- tempfile()
+download.file("http://www2.census.gov/geo/docs/maps-data/data/gazetteer/Gaz_zcta_national.zip",temp)
+
+# import Gazetteer zip file, remove temp file
+gaz <- read.csv(unz(temp, "Gaz_zcta_national.txt"), sep="\t")
+unlink(temp)
+
+# Import local version
+# gaz <- read.csv(file="rao_originaldata/zip_zcta/Gaz_zcta_national.txt", sep="\t", header=T, stringsAsFactors = F)
+
+# select ZCTA and lat/lon, rename columns
+gaz <- gaz %>%
+  select(zcta = GEOID, lon = INTPTLONG, lat = INTPTLAT)
+
+# merge ZCTA with gazetteer coordinates data
+zctalatlon <- zcta %>%
+  left_join(gaz) %>%
+  select(-zip)
+
+rm(gaz)
+
+# Export
+saveRDS(zcta, file="rao_workingdata/zcta.rds")
+saveRDS(zctalatlon, file="rao_workingdata/zctalatlon.rds")
