@@ -169,8 +169,26 @@ pt <- pt %>%
 # clear workspace
 rm(arf12, arf12cols, county)
 
+# ZIP CODES
+# Identify hospitals that for some reason do not have ZIP codes, will have to assign them manually
+unique(pt[is.na(pt$hplzip),"oshpd_id"])
+
+# Manually enter zip codes (found from OSHPD financial records)
+pt$hplzip[pt$oshpd_id==300032] <- 92868
+pt$hplzip[pt$oshpd_id==301127] <- 92821
+pt$hplzip[pt$oshpd_id==301140] <- 92869
+pt$hplzip[pt$oshpd_id==301279] <- 92868
+pt$hplzip[pt$oshpd_id==301283] <- 92843
+pt$hplzip[pt$oshpd_id==301297] <- 92870
+pt$hplzip[pt$oshpd_id==301357] <- 92780
+pt$hplzip[pt$oshpd_id==304045] <- 92618
+pt$hplzip[pt$oshpd_id==304079] <- 92780
+pt$hplzip[pt$oshpd_id==331152] <- 92882
+pt$hplzip[pt$oshpd_id==370759] <- 91950
+
 # Convert all ZIP codes to ZCTAs
-load("rao_workingdata/zcta.rda")
+zcta <- readRDS("rao_workingdata/zcta.rds")
+
 # Hospital ZIP to ZCTA
 pt <- pt %>%
   left_join(zcta, by = c("hplzip" ="zip")) %>%
