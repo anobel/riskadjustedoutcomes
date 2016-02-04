@@ -26,7 +26,7 @@ download.file("http://www2.census.gov/geo/docs/maps-data/data/gazetteer/Gaz_zcta
 
 # import Gazetteer zip file, remove temp file
 gaz <- read.csv(unz(temp, "Gaz_zcta_national.txt"), sep="\t")
-unlink(temp)
+unlink(temp); rm(temp)
 
 # Import local version
 # gaz <- read.csv(file="rao_originaldata/zip_zcta/Gaz_zcta_national.txt", sep="\t", header=T, stringsAsFactors = F)

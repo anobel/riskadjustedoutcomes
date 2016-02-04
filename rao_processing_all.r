@@ -1,10 +1,11 @@
 library(stringr)
 library(tidyr)
 library(dplyr)
+library(sp)
 
 # load previously saved data 
 # dsh <- readRDS("rao_workingdata/dsh.rds")
-# load("rao_workingdata/zcta.rda")
+# zcta <- readRDS("rao_workingdata/zcta.rds")
 # acs <- readRDS("rao_workingdata/acs.rds")
 # ru <- readRDS("rao_workingdata/rural.rds")
 # load("rao_workingdata/md.rda")
@@ -65,6 +66,50 @@ ru <- readRDS("rao_workingdata/rural.rds")
 pt <- pt %>%
   left_join(ru, by=c("patzcta" = "zcta"))
 rm(ru)
+
+# Merge ZCTA Lat/Lon data, for both patient and hospital ZCTA
+# Import same data set, zctalatlon twice, once to use for patient zip, once for hospital zip
+ptlatlon <- readRDS("rao_workingdata/zctalatlon.rds")
+colnames(ptlatlon) <- c("patzcta", "ptlon", "ptlat")
+pt <- pt %>% 
+  left_join(ptlatlon)
+
+hosplatlon <- readRDS("rao_workingdata/zctalatlon.rds")
+colnames(hosplatlon) <- c("hospzcta", "hosplon", "hosplat")
+pt <- pt %>%
+  left_join(hosplatlon)
+
+rm(hosplatlon, ptlatlon)
+
+# make a DF with rln + patzcta (to account for patients that moved)
+# drop any with missing ZCTA complete.cases
+# make distance matrix, using unique combinations of pat/hosp zctas
+# merge back to main dataframe
+ptzips <- pt %>%
+  ungroup() %>%
+  filter(!is.na(patzcta) & !is.na(hospzcta)) %>%
+  select(
+    patzcta, ptlon, ptlat,
+    hospzcta, hosplon, hosplat
+    ) %>%
+  unique()
+
+# Calculate distance between patient and hospital, in km, straight line
+crow <- sapply(1:nrow(ptzips),function(x) spDistsN1(as.matrix(ptzips[x,c("ptlon", "ptlat")]),as.matrix(ptzips[x,c("hosplon", "hosplat")]),longlat=T))
+
+# Convert to miles
+crow <- crow*0.6214
+
+# cbind distances
+ptzips <- ptzips %>%
+  select(patzcta, hospzcta) %>%
+  cbind(crow)
+
+# merge to main patient data, using hospzcta and patzcta as keys
+pt <- pt %>%
+  left_join(ptzips)
+
+rm(crow, ptzips)     
 
 # Save as an RDS so its easier to reload into different named objects
 saveRDS(pt, file="rao_workingdata/ptcombined.rds")
