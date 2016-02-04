@@ -6,7 +6,7 @@ library(dplyr)
 # dsh <- readRDS("rao_workingdata/dsh.rds")
 # load("rao_workingdata/zcta.rda")
 # acs <- readRDS("rao_workingdata/acs.rds")
-rural <- readRDS("rao_workingdata/rural.rds")
+# ru <- readRDS("rao_workingdata/rural.rds")
 # load("rao_workingdata/md.rda")
 # load("rao_workingdata/arf12.rda")
 # oshpdxwalk <- readRDS("rao_workingdata/oshpdxwalk.rds")
@@ -58,6 +58,13 @@ acs <- readRDS(file="rao_workingdata/acs.rds")
 pt <- pt %>%
   left_join(acs, by=c("patzcta" = "zcta"))
 rm(acs)
+
+# Merge Rural/Urban Classifications
+ru <- readRDS("rao_workingdata/rural.rds")
+
+pt <- pt %>%
+  left_join(ru, by=c("patzcta" = "zcta"))
+rm(ru)
 
 # Save as an RDS so its easier to reload into different named objects
 saveRDS(pt, file="rao_workingdata/ptcombined.rds")
