@@ -35,10 +35,12 @@ unlink(temp)
 gaz <- gaz %>%
   select(zcta = GEOID, lon = INTPTLONG, lat = INTPTLAT)
 
+# select unique ZCTAs
+zctalatlon <- data.frame(zcta = unique(zcta$zcta))
+
 # merge ZCTA with gazetteer coordinates data
-zctalatlon <- zcta %>%
-  left_join(gaz) %>%
-  select(-zip)
+zctalatlon <- zctalatlon %>%
+  left_join(gaz)
 
 rm(gaz)
 
