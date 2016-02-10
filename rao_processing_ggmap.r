@@ -12,6 +12,7 @@ ptgu <- readRDS("rao_workingdata/ptgu.rds")
 
 # make dataframe of unique zip combinations and drop obs with mizzing zips
 ptzips <- ptgu %>%
+  ungroup () %>%
   filter(!is.na(patzcta) & !is.na(hospzcta)) %>%
   select(
     patzcta, hospzcta
@@ -19,7 +20,7 @@ ptzips <- ptgu %>%
   mutate(
     patzcta = as.character(patzcta),
     hospzcta = as.character(hospzcta)) %>%
-  unique()
+  distinct(patzcta, hospzcta)
 
 # calculate distances using mapdist() in ggmap package
 # but due to google API limit of 2500 reuests per day, have to do it in a series of chunks and combine them
@@ -33,13 +34,14 @@ driving <- driving[sapply(driving,length)==8]
 drivingdf <- rbind(drivingdf,do.call(rbind, driving))
 
 driving <- driving %>%
-  select(
-    patzcta = from,
-    hospzcta = to,
+ mutate(
+   patzcta = as.numeric(from),
+   hospzcta = as.numeric(to),
+ ) %>%
+ select(
+    patzcta, hospzcta,
     km, miles,
     hours
-  )
-
-head(driving)
+ ) 
 
 saveRDS(driving, file="rao_workingdata/distances.rds")
