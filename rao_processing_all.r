@@ -92,24 +92,33 @@ ptzips <- pt %>%
     patzcta, ptlon, ptlat,
     hospzcta, hosplon, hosplat
     ) %>%
-  unique()
+  distinct(patzcta, hospzcta)
 
 # Calculate distance between patient and hospital, in km, straight line
-crow <- sapply(1:nrow(ptzips),function(x) spDistsN1(as.matrix(ptzips[x,c("ptlon", "ptlat")]),as.matrix(ptzips[x,c("hosplon", "hosplat")]),longlat=T))
+crowkm <- sapply(1:nrow(ptzips),function(x) spDistsN1(as.matrix(ptzips[x,c("ptlon", "ptlat")]),as.matrix(ptzips[x,c("hosplon", "hosplat")]),longlat=T))
 
 # Convert to miles
-crow <- crow*0.6214
+crowm <- crowkm*0.6214
 
 # cbind distances
 ptzips <- ptzips %>%
   select(patzcta, hospzcta) %>%
-  cbind(crow)
+  cbind(crowkm, crowm)
 
 # merge to main patient data, using hospzcta and patzcta as keys
 pt <- pt %>%
   left_join(ptzips)
 
-rm(crow, ptzips)     
+rm(crowkm, crowm, ptzips)     
+
+# import driving distances as calculated using ggmap and google map API
+# Currently, have only calculated driving distances/times for GU cohort, but will merge here so that
+# in the future, when entire cohort is complete, no changes need to be made here
+distances <- readRDS(file="rao_workingdata/distances.rds")
+
+# merge with distances DF using pat/hosp zcta as keys
+pt <- pt %>%
+  left_join(distances)
 
 # Save as an RDS so its easier to reload into different named objects
 saveRDS(pt, file="rao_workingdata/ptcombined.rds")
