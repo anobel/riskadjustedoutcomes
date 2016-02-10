@@ -33,7 +33,7 @@ driving <- driving[sapply(driving,length)==8]
 # drivingdf <- list()
 drivingdf <- rbind(drivingdf,do.call(rbind, driving))
 
-driving <- driving %>%
+driving <- drivingdf %>%
  mutate(
    patzcta = as.numeric(from),
    hospzcta = as.numeric(to),
@@ -43,5 +43,8 @@ driving <- driving %>%
     km, miles,
     hours
  ) 
+
+driving$patzcta <- as.numeric(driving$patzcta)
+driving$hospzcta <- as.numeric(driving$hospzcta)
 
 saveRDS(driving, file="rao_workingdata/distances.rds")
