@@ -8,6 +8,7 @@ setwd("~/Documents/code/rao")
 # load the dataframe of addresses for which we want to calculate driving distances
 # For now, because google maps API limit is 2500 requests per day, will only do the urology cohort
 # which is about 20k combinations of to/from zip codes
+# pt <- readRDS("rao_workingdata/pt.rds")
 ptgu <- readRDS("rao_workingdata/ptgu.rds")
 
 # make dataframe of unique zip combinations and drop obs with mizzing zips
@@ -40,7 +41,7 @@ driving <- drivingdf %>%
  ) %>%
  select(
     patzcta, hospzcta,
-    km, miles,
+    km,
     hours
  ) 
 

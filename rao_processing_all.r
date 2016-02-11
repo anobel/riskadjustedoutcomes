@@ -97,19 +97,16 @@ ptzips <- pt %>%
 # Calculate distance between patient and hospital, in km, straight line
 crowkm <- sapply(1:nrow(ptzips),function(x) spDistsN1(as.matrix(ptzips[x,c("ptlon", "ptlat")]),as.matrix(ptzips[x,c("hosplon", "hosplat")]),longlat=T))
 
-# Convert to miles
-crowm <- crowkm*0.6214
-
 # cbind distances
 ptzips <- ptzips %>%
   select(patzcta, hospzcta) %>%
-  cbind(crowkm, crowm)
+  cbind(crowkm)
 
 # merge to main patient data, using hospzcta and patzcta as keys
 pt <- pt %>%
   left_join(ptzips)
 
-rm(crowkm, crowm, ptzips)     
+rm(crowkm, ptzips)     
 
 # import driving distances as calculated using ggmap and google map API
 # Currently, have only calculated driving distances/times for GU cohort, but will merge here so that
@@ -119,7 +116,7 @@ distances <- readRDS(file="rao_workingdata/distances.rds")
 # merge with distances DF using pat/hosp zcta as keys
 pt <- pt %>%
   left_join(distances)
-
+rm(distances)
 # Save as an RDS so its easier to reload into different named objects
 saveRDS(pt, file="rao_workingdata/ptcombined.rds")
 
@@ -128,7 +125,25 @@ saveRDS(pt, file="rao_workingdata/ptcombined.rds")
 ptgu <- pt[!is.na(pt$cohort),]
 # Drop those with multiple GU surgeries
 ptgu <- ptgu[ptgu$cohort!="Multiple GU Sx",]
+
+# drop procedure, diagnosis fields
+ptgu <- ptgu %>% select(
+      -diag_p, -(odiag1:odiag9),
+      -poa_p, -(opoa1:opoa9),
+      -proc_p, -(oproc1:oproc9),
+      -proc_pdt, -(procdt1:procdt9)
+      )
+
+# Combine Payer Categories
+# not sure what to do with "Other Govt" just yet...
+ptgu$pay_cat[ptgu$pay_cat=="Invalid"] <- "Other Payer"
+ptgu$pay_cat[ptgu$pay_cat=="Workers Comp"] <- "Other Payer"
+ptgu$pay_cat[ptgu$pay_cat=="Other Indigent"] <- "County Indigent"
+
+# drop levels
 ptgu <- droplevels(ptgu)
+
+
 saveRDS(ptgu, file="rao_workingdata/ptgu.rds")
 
 # Make a subsample of 100k and save as a smaller dataset

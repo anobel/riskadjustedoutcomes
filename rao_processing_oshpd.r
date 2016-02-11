@@ -120,8 +120,7 @@ pt$typcare <- factor(pt$typcare, levels = c(0, 1, 3, 4, 5, 6), labels=c("Blank",
 
 # Disposition
 pt$disp <- factor(pt$disp, levels=0:13, labels=c("Invalid", "Home", "Acute Care", "Other Care Level", "SNF", "Acute-Other Facility", "Other Care Level-Other Facility", "SNF-Other Facility", "Residential Care", "Incarcerated", "AMA", "Died", "Home Health", "Other"))
-# Exclude patients with the following dispositions: Invalid
-pt <- pt %>% filter(disp!="Invalid")
+
 ### Demographics
 # Sex
 # Keep only male/female categories
@@ -132,9 +131,11 @@ pt$sex <- factor(pt$sex, levels=1:2, labels=c("Male", "Female"))
 # Age
 # To prep for analysis, set age 18 as the baseline (0), and divide by 10 for ease of interpretation
 pt$agyradmcentered <- (pt$agyradm-18)/10
+# drop age at discharge and birthdate
+pt <- pt %>% select(-agyrdsch, -bthdate)
 
-# Ethnicity (Self-Report)
-pt$ethncty <- factor(pt$ethncty, levels=0:3, labels=c("Invalid", "Hispanic", "Non-Hispanic", "Unknown"))
+# Ethnicity (Self-Report); drop invalid but keep unknowns
+pt$ethncty <- factor(pt$ethncty, levels=1:3, labels=c("Invalid", "Hispanic", "Non-Hispanic", "Unknown"))
 
 # Race/Ethnicity (Self - Report)
 pt$race <- factor(pt$race, levels=0:6, labels=c("Invalid", "White", "Black", "NativeAm", "AsianPI", "Other", "Unknown"))
@@ -260,6 +261,8 @@ pt$pay_type <- factor(pt$pay_type, levels=c(0, 1, 2, 3), labels=c("Not Applicabl
 ## MS DRGs
 # MS-DRG Severity Code
 pt$sev_code <- factor(pt$sev_code, levels=0:2, labels=c("Not CC/MCC Based", "MCC Based", "CC Based"))
+# but drop severity code, not a useful variable in this analysis
+pt <- pt %>% select(-sev_code)
 
 # DRG used for 2007 data, MS-DRG used in 2008+
 # Used year-specific DRG/MSDRGs because Grouper changes each year
@@ -433,6 +436,10 @@ pt <- readmit %>%
 
 rm(readmit)
 
+# Keep ONLY acute care visits (remove pychiatric/physical rehab admissions as allowable index admissions)
+# Drop type care variable
+pt <- pt %>% filter(typcare=="Acute Care") %>% select(-typcare)
+
 #####################################
 #### Procedure Specific Cohorts
 #####################################
@@ -492,23 +499,27 @@ pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort
 # generate years variable, which counts number of years of data included
 # It is 5, but in case we include additional data in future
 years <- as.numeric(difftime(max(pt$dschdate), min(pt$dschdate))/365)
+
 pt <- pt %>%
   group_by(oshpd_id, cohort) %>%
-  summarise(volume = n()/years) %>%
+  summarise(volume = n()) %>%
   filter(!is.na(cohort)) %>%
-  group_by(cohort) %>%
-  mutate(volumequint = ntile(volume, 5)
-  ) %>%
+  group_by(cohort)%>%
+  mutate(
+    volumequart = ntile(volume, 4),
+    volumequint = ntile(volume, 5)
+    ) %>%
   right_join(pt)
 
 # save quintiles as factor variable
 pt$volumequint <- factor(pt$volumequint)
+pt$volumequart <- factor(pt$volumequart)
 rm(years)  
 
 # Checkpoint
 # setwd("/Users/anobel/Documents/code/rao/")
 saveRDS(pt, file="rao_workingdata/pt.rds")
-saveRDS(cohort, file="rao_workingdata/cohort.rds")
+# saveRDS(cohort, file="rao_workingdata/cohort.rds")
 rm(cohort, codes, diags, procs, icd9detail)
 # Once complete, run rao_processing_all.r to combine with other datasets
 
