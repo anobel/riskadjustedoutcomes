@@ -134,15 +134,30 @@ ptgu <- ptgu %>% select(
       -proc_pdt, -(procdt1:procdt9)
       )
 
-# Combine Payer Categories
+# Consolidate Payer Categories
 # not sure what to do with "Other Govt" just yet...
 ptgu$pay_cat[ptgu$pay_cat=="Invalid"] <- "Other Payer"
 ptgu$pay_cat[ptgu$pay_cat=="Workers Comp"] <- "Other Payer"
 ptgu$pay_cat[ptgu$pay_cat=="Other Indigent"] <- "County Indigent"
 
+# Disposition
+# remove those ineligible for consideration (AMA, Incarcerated, Dead)
+ptgu <- ptgu %>% filter(!disp %in% c("AMA", "Incarcerated", "Died"))
+
+# Consolidate disposition
+ptgu$disp[ptgu$disp=="SNF-Other Facility"] <- "SNF"
+ptgu$disp[ptgu$disp=="Residential Care"] <- "SNF"
+# only 1 case transferred to Acute Care at same facility? seems coding error, will combine with other
+ptgu$disp[ptgu$disp=="Acute Care"] <- "Other"
+
+# This is a heterogenous group, but small numbers. May look into more detail later.
+ptgu$disp[ptgu$disp=="Other Care Level"] <- "Other"
+ptgu$disp[ptgu$disp=="Acute-Other Facility"] <- "Other"
+ptgu$disp[ptgu$disp=="Other Care Level-Other Facility"] <- "Other"
+
+table(ptgu$disp)
 # drop levels
 ptgu <- droplevels(ptgu)
-
 
 saveRDS(ptgu, file="rao_workingdata/ptgu.rds")
 
