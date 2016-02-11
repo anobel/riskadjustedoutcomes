@@ -16,7 +16,7 @@ ru <- getURL("https://ruralhealth.und.edu/ruca/final310.csv")
 ru <- read.csv(textConnection(ru))
 
 # load zipcode/ZCTA file
-load("rao_workingdata/zcta.rda")
+zcta <- readRDS("rao_workingdata/zcta.rds")
 
 # select the zip code and RUCA30 columns only
 ru <- ru %>%
@@ -78,5 +78,14 @@ rural <- c(3.0, 4.0, 4.2, 5.0, 5.2, 6.0, 6.1, 7.0, 7.2, 7.3, 7.4, 8.0, 8.2, 8.3,
 ru$ru[ru$ruca %in% urban] <- "Urban"
 ru$ru[ru$ruca %in% rural] <- "Rural"
 
+# Factor rural/urban
+ru$ru <- factor(ru$ru)
+
+# remove RUCA classification, keep Rural/Urban binary
+ru$ruca <- NULL
+
+# clean environment
 rm(rural, urban)
+
+# save as RDS
 saveRDS(ru, file="rao_workingdata/rural.rds")
