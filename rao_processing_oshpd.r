@@ -121,6 +121,9 @@ pt$typcare <- factor(pt$typcare, levels = c(0, 1, 3, 4, 5, 6), labels=c("Blank",
 # Disposition
 pt$disp <- factor(pt$disp, levels=0:13, labels=c("Invalid", "Home", "Acute Care", "Other Care Level", "SNF", "Acute-Other Facility", "Other Care Level-Other Facility", "SNF-Other Facility", "Residential Care", "Incarcerated", "AMA", "Died", "Home Health", "Other"))
 
+# Assign weekdays to the date of discharge
+pt$dschweekday <- wday(pt$dschdate, label=T)
+
 ### Demographics
 # Sex
 # Keep only male/female categories
@@ -519,7 +522,7 @@ rm(years)
 # Checkpoint
 # setwd("/Users/anobel/Documents/code/rao/")
 saveRDS(pt, file="rao_workingdata/pt.rds")
-# saveRDS(cohort, file="rao_workingdata/cohort.rds")
+
 rm(cohort, codes, diags, procs, icd9detail)
 # Once complete, run rao_processing_all.r to combine with other datasets
 
