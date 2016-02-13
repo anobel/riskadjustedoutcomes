@@ -39,12 +39,12 @@ dsh <- readRDS("rao_workingdata/dsh.rds")
 dshmeans <- dsh %>%
   group_by(providerid) %>%
   summarise(
-    bedsMean = mean(beds),
-    adcMean = mean(adc),
-    dsh_pctMean = mean(dsh_pct),
-    mcr_pctMean = mean(mcr_pct),
-    cmiMean = mean(cmi)
-    )
+    bedsMean = mean(beds, na.rm=T),
+    adcMean = mean(adc, na.rm=T),
+    dsh_pctMean = mean(dsh_pct, na.rm=T),
+    mcr_pctMean = mean(mcr_pct, na.rm=T),
+    cmiMean = mean(cmi, na.rm=T),
+    dshquintile = median(dshquintile, na.rm=T))
 
 # Merge PT and newly created DSH means data
 pt <- pt %>%
