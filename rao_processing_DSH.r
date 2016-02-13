@@ -1,4 +1,4 @@
-library(plyr)
+# library(plyr)
 library(stringr)
 library(ggmap)
 library(dplyr)
@@ -104,15 +104,14 @@ missing <- dsh %>%
   distinct(providerid) %>%
   select(providerid, name, Address, City, State, ZIP.Code, County.Name)
 
-# save the missing hospitals to a csv to manually find addresses
-# re-import the DF once I've put addresses in manually
-# missing <- read.csv("missing.csv")
-# Geocode using ggmap to get lat/lon, combine with missing df
-#missingcoords <- geocode(paste(missing$Address, missing$City, missing$ZIP.Code))
-#missing <- cbind(missing, missingcoords)
-#write.csv(missing, "missing.csv")
 
-missing <- read.csv("missing.csv", stringsAsFactors = F)
+# save the missing hospitals to a csv to manually find addresses
+write.csv(missing, "rao_workingdata/missing.csv", row.names = F)
+# re-import the DF once I've put addresses in manually
+missing <- read.csv("rao_workingdata/missing_completed.csv")
+# Geocode using ggmap to get lat/lon, combine with missing df
+missingcoords <- geocode(paste(missing$Address, missing$City, missing$ZIP.Code))
+missing <- cbind(missing, missingcoords)
 
 # make a new Location column in the missing DF, combination of all address fields in one
 missing$Location <- paste(missing$Address, missing$City, missing$State, missing$ZIP.Code, sep=" ")
@@ -125,7 +124,6 @@ dsh$Address[vec] <- missing[match(dsh$providerid, missing$providerid),"Address"]
 dsh$City[vec] <- missing[match(dsh$providerid, missing$providerid),"City"][vec]
 dsh$State[vec] <- missing[match(dsh$providerid, missing$providerid),"State"][vec]
 dsh$ZIP.Code[vec] <- missing[match(dsh$providerid, missing$providerid),"ZIP.Code"][vec]
-dsh$County.Name[vec] <- missing[match(dsh$providerid, missing$providerid),"County.Name"][vec]
 dsh$lon <- missing[match(dsh$providerid, missing$providerid),"lon"]
 dsh$lat <- missing[match(dsh$providerid, missing$providerid),"lat"]
 
@@ -148,7 +146,37 @@ titlecase <- c("name", "Hospital.Name", "Address", "City", "County.Name")
 dsh[,colnames(dsh) %in% titlecase] <- lapply(dsh[,colnames(dsh) %in% titlecase], FUN=str_to_title)
 rm(titlecase)
 
+# Scale percentages to 100
 dsh$dsh_pct <- dsh$dsh_pct*100
 dsh$mcr_pct <- dsh$mcr_pct*100
+
+# Assign hospitals to quintiles
+dsh <- dsh %>%
+  group_by(providerid) %>%
+  summarise(
+    dshMean = mean(dsh_pct, na.rm=T)
+  ) %>%
+  mutate(
+    dshquintile = ntile(dshMean, 5)
+  ) %>%
+  select(-dshMean) %>%
+  right_join(dsh)
+
+# classify safety net hospitals as top quintile of DSH percentage
+dsh$safetydsh <- factor(ifelse(dsh$dshquintile==5, "Yes", "No"))
+
+# Assign Safety Net status based on NAPH membership
+# assign all hospitals as "no", then tag specific hospitals as YES
+dsh$safetynaph <- "No"
+
+# Listing of safety net list from California Association of Public Hospitals and Health Systems
+# http://caph.org/caphmemberhospitals/memberdirectory/
+# Cross referenced with list from California Health Care Safety Net Institute
+# http://safetynetinstitute.org/californias-public-hospitals-and-clinics/
+safetynaph <- c(50320, 50211, 50276, 50315, 50373, 50376, 50040, 50717, 50262, 50248, 50348, 50292, 50599,
+                50245, 50025, 50228, 50668, 50454, 50167, 50113, 50038, 50159)
+
+dsh$safetynaph[dsh$providerid %in% safetynaph] <- "Yes"
+rm(safetynaph)
 
 saveRDS(dsh, file="rao_workingdata/dsh.rds")
