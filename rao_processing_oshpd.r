@@ -522,6 +522,17 @@ pt$volumequart <- factor(pt$volumequart)
 
 rm(cohort, codes, diags, procs, icd9detail)
 
+# Calculate cohort specific in-hospital mortality over the time period, merge with primary data
+pt <- pt %>%
+  filter(!is.na(cohort)) %>%
+  group_by(providerid, cohort) %>%
+  dplyr::summarise(
+    cohortadmits = n(),
+    cohortdeaths = sum(disp=="Died")) %>%
+  mutate(cohortmortality = (cohortdeaths/cohortadmits)*100) %>%
+    arrange(desc(cohortdeaths)) %>%
+  right_join(pt)
+
 saveRDS(pt, file="rao_workingdata/pt.rds")
 
 # Once complete, run rao_processing_all.r to combine with other datasets
