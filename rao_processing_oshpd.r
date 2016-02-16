@@ -2,9 +2,9 @@
 #### Load Packages
 ##################
 
-# Data Cleaning Packages
+# Data Management Packages
+library(data.table)
 library(stringr)
-library(plyr)
 library(tidyr)
 library(dplyr)
 library(lubridate)
@@ -75,10 +75,10 @@ codes$SxRPLND <- c("590", "5900", "5902", "5909", "4029", "403", "4052", "4059")
 ##################
 
 # Import OSHPD data into a list of dataframes
-pt <- apply(data.frame(paste("rao_originaldata/oshpd/",list.files("rao_originaldata/oshpd/"),sep="")), 1, FUN=read.csv, na.strings=c(""), header=TRUE, stringsAsFactors=TRUE)
+pt <- apply(data.frame(paste("rao_originaldata/oshpd/",list.files("rao_originaldata/oshpd/"),sep="")), 1, FUN=fread, na.strings=c(""), header=TRUE, stringsAsFactors=TRUE)
 
-# row binds all the dataframes in the list into one frame. rbind.fill from plyr
-pt <- do.call(rbind.fill, pt)
+# row binds all the dataframes in the list into one frame
+pt <- rbind_all(pt)
 
 # place columns in alphabetical order (ignore incorrect numerical ordering)
 pt <- pt[,sort(colnames(pt))]
@@ -138,7 +138,7 @@ pt$agyradmcentered <- (pt$agyradm-18)/10
 pt <- pt %>% select(-agyrdsch, -bthdate)
 
 # Ethnicity (Self-Report); drop invalid but keep unknowns
-pt$ethncty <- factor(pt$ethncty, levels=1:3, labels=c("Invalid", "Hispanic", "Non-Hispanic", "Unknown"))
+pt$ethncty <- factor(pt$ethncty, levels=0:3, labels=c("Invalid", "Hispanic", "Non-Hispanic", "Unknown"))
 
 # Race/Ethnicity (Self - Report)
 pt$race <- factor(pt$race, levels=0:6, labels=c("Invalid", "White", "Black", "NativeAm", "AsianPI", "Other", "Unknown"))
@@ -174,25 +174,25 @@ pt <- pt %>%
 rm(arf12, arf12cols, county)
 
 # ZIP CODES
-# Identify hospitals that for some reason do not have ZIP codes, will have to assign them manually
-unique(pt[is.na(pt$hplzip),"oshpd_id"])
-
-# Manually enter zip codes (found from OSHPD financial records)
-pt$hplzip[pt$oshpd_id==300032] <- 92868
-pt$hplzip[pt$oshpd_id==301127] <- 92821
-pt$hplzip[pt$oshpd_id==301140] <- 92869
-pt$hplzip[pt$oshpd_id==301279] <- 92868
-pt$hplzip[pt$oshpd_id==301283] <- 92843
-pt$hplzip[pt$oshpd_id==301297] <- 92870
-pt$hplzip[pt$oshpd_id==301357] <- 92780
-pt$hplzip[pt$oshpd_id==304045] <- 92618
-pt$hplzip[pt$oshpd_id==304079] <- 92780
-pt$hplzip[pt$oshpd_id==331152] <- 92882
-pt$hplzip[pt$oshpd_id==370759] <- 91950
+# # Identify hospitals that for some reason do not have ZIP codes, will have to assign them manually
+# 
+# # Manually enter zip codes (found from OSHPD financial records)
+# pt$hplzip[pt$oshpd_id==300032] <- 92868
+# pt$hplzip[pt$oshpd_id==301127] <- 92621
+# pt$hplzip[pt$oshpd_id==301140] <- 92869
+# pt$hplzip[pt$oshpd_id==301279] <- 92868
+# pt$hplzip[pt$oshpd_id==301283] <- 92843
+# pt$hplzip[pt$oshpd_id==301297] <- 92870
+# pt$hplzip[pt$oshpd_id==301357] <- 92780
+# pt$hplzip[pt$oshpd_id==304045] <- 92618
+# pt$hplzip[pt$oshpd_id==304079] <- 92780
+# pt$hplzip[pt$oshpd_id==331152] <- 92882
+# pt$hplzip[pt$oshpd_id==370759] <- 91950
 
 # Convert all ZIP codes to ZCTAs
 zcta <- readRDS("rao_workingdata/zcta.rds")
 
+##################
 # Hospital ZIP to ZCTA
 pt <- pt %>%
   left_join(zcta, by = c("hplzip" ="zip")) %>%
@@ -238,7 +238,7 @@ pt$pay_cat <- factor(pt$pay_cat, levels=0:9, labels=c("Invalid", "Medicare", "Me
 payers <- apply(data.frame(paste("rao_originaldata/oshpd_appendix/appendix_payers/",list.files("rao_originaldata/oshpd_appendix/appendix_payers"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
 # combine into one dataframe
 payers <- do.call(rbind, payers)
-table(pt$plan_name)
+
 # remove white space characters at start and end of payer names
 payers$plan_name <- str_trim(payers$plan_name)
 
@@ -514,16 +514,16 @@ pt <- pt %>%
     ) %>%
   right_join(pt)
 
+rm(years)
+
 # save quintiles as factor variable
 pt$volumequint <- factor(pt$volumequint)
 pt$volumequart <- factor(pt$volumequart)
-rm(years)  
-
-# Checkpoint
-# setwd("/Users/anobel/Documents/code/rao/")
-saveRDS(pt, file="rao_workingdata/pt.rds")
 
 rm(cohort, codes, diags, procs, icd9detail)
+
+saveRDS(pt, file="rao_workingdata/pt.rds")
+
 # Once complete, run rao_processing_all.r to combine with other datasets
 
 # Misc
