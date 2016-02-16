@@ -8,6 +8,7 @@ library(sp)
 # zcta <- readRDS("rao_workingdata/zcta.rds")
 # acs <- readRDS("rao_workingdata/acs.rds")
 # ru <- readRDS("rao_workingdata/rural.rds")
+# resident <- readRDS("rao_workingdata/residents.rds")
 # load("rao_workingdata/md.rda")
 # load("rao_workingdata/arf12.rda")
 # oshpdxwalk <- readRDS("rao_workingdata/oshpdxwalk.rds")
@@ -38,7 +39,7 @@ dsh <- readRDS("rao_workingdata/dsh.rds")
 # will average each hospital's values over the data time period (5 years)
 dshmeans <- dsh %>%
   group_by(providerid) %>%
-  summarise(
+  dplyr::summarise(
     bedsMean = mean(beds, na.rm=T),
     adcMean = mean(adc, na.rm=T),
     dsh_pctMean = mean(dsh_pct, na.rm=T),
@@ -46,10 +47,23 @@ dshmeans <- dsh %>%
     cmiMean = mean(cmi, na.rm=T),
     dshquintile = median(dshquintile, na.rm=T))
 
+dshmeans <- dsh %>%
+  group_by(providerid) %>%
+  select(providerid, safetydsh, safetynaph) %>%
+  distinct() %>%
+  right_join(dshmeans)
+
 # Merge PT and newly created DSH means data
 pt <- pt %>%
   left_join(dshmeans)
 rm(dsh, dshmeans)
+
+# Import data on resident number, residency status
+residents <- readRDS("rao_workingdata/residents.rds")
+
+pt <- pt %>%
+  left_join(residents)
+rm(residents)
 
 # Merge ACS SES data and Diez Roux Neighborhood score
 # Import
@@ -155,13 +169,12 @@ ptgu$disp[ptgu$disp=="Other Care Level"] <- "Other"
 ptgu$disp[ptgu$disp=="Acute-Other Facility"] <- "Other"
 ptgu$disp[ptgu$disp=="Other Care Level-Other Facility"] <- "Other"
 
-table(ptgu$disp)
 # drop levels
 ptgu <- droplevels(ptgu)
 
 saveRDS(ptgu, file="rao_workingdata/ptgu.rds")
 
 # Make a subsample of 100k and save as a smaller dataset
-ptlite <- pt %>% ungroup() %>% sample_n(100000, replace=F) %>% droplevels()
-saveRDS(ptlite, file="rao_workingdata/ptlite.rds")
-rm(ptlite)
+# ptlite <- pt %>% ungroup() %>% sample_n(100000, replace=F) %>% droplevels()
+# saveRDS(ptlite, file="rao_workingdata/ptlite.rds")
+# rm(ptlite)
