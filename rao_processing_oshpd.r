@@ -525,7 +525,7 @@ rm(cohort, codes, diags, procs, icd9detail)
 # Calculate cohort specific in-hospital mortality over the time period, merge with primary data
 pt <- pt %>%
   filter(!is.na(cohort)) %>%
-  group_by(providerid, cohort) %>%
+  group_by(oshpd_id, cohort) %>%
   dplyr::summarise(
     cohortadmits = n(),
     cohortdeaths = sum(disp=="Died")) %>%

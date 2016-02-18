@@ -156,11 +156,10 @@ ptgu$pay_cat[ptgu$pay_cat=="Other Indigent"] <- "County Indigent"
 
 # Disposition
 # remove those ineligible for consideration (AMA, Incarcerated, Dead)
-ptgu <- ptgu %>% filter(!disp %in% c("AMA", "Incarcerated", "Died"))
+ptgu <- ptgu %>% filter(!disp %in% c("Incarcerated", "Died"))
 
 # Consolidate disposition
 ptgu$disp[ptgu$disp=="SNF-Other Facility"] <- "SNF"
-ptgu$disp[ptgu$disp=="Residential Care"] <- "SNF"
 # only 1 case transferred to Acute Care at same facility? seems coding error, will combine with other
 ptgu$disp[ptgu$disp=="Acute Care"] <- "Other"
 
