@@ -1,10 +1,10 @@
 #TOC {
   position: fixed;
   left: 0;
-  top: 70px;
-  width: 200px;
+  top: 50px;
+  width: 250px;
   height: 100%;
-  overflow:auto;
+  overflow:scroll;
 }
 
 body {
