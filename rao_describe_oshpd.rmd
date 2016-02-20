@@ -1,6 +1,6 @@
 ---
 title: "Risk Adjusted Outcomes for Urologic Oncology"
-subtitle: "OSHPD Data Descriptions"
+subtitle: "Readmissions Modeling"
 author: "Anobel Y Odisho, Ruth Etzioni, John L Gore"
 date: "`r Sys.Date()`"
 output: 
@@ -9,7 +9,7 @@ output:
         css: floating.css
         toc: yes
 params:
-    cohort: "PartialNx"
+    cohort: "Cystectomy"
 ---
 
 ```{r global_options, include=FALSE}

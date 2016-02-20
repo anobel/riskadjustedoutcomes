@@ -1,0 +1,113 @@
+---
+title: "Risk Adjusted Outcomes for Urologic Oncology"
+subtitle: "Tables"
+author: "Anobel Y Odisho, Ruth Etzioni, John L Gore"
+date: "`r Sys.Date()`"
+output: 
+  tufterhandout::html_tufte_handout:
+        theme: cosmo
+        css: floating.css
+        toc: yes
+params:
+    cohort: ""
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=F)
+```
+
+<!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
+<style>
+  td {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+</style>
+  
+```{r packages, cache=F}
+# Data Cleaning Packages
+library(dplyr)
+
+# Graphics Packages
+library(DT)
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+library(RColorBrewer)
+library(stargazer)
+
+# Specialty/Stats Packages
+library(icd9)
+library(ROCR)
+library(lme4)
+```
+
+```{r constants.functions}
+bg <- "#FCFCFA"
+main1 <- "#ca0020"
+acc1 <- "#f4a582"
+main2 <- "#92c5de"
+acc2 <- "#0571b0"
+# this function takes arguments x=value, y=number of sig figs, prints mean +/- SD in html
+prettyMeanSD <- function (x,y) {
+  mean <- prettyNum(round(mean(x, na.rm=TRUE),y), big.mark = ",")
+  sd <-  prettyNum(round(sd(x, na.rm=TRUE),y), big.mark = ",")
+  paste(mean, " &plusmn; ",sd,sep="")
+}
+
+prettyMedianIQR <- function (x,y) {
+  median <- prettyNum(round(median(x, na.rm=TRUE),y), big.mark = ",")
+  tiles <- round(quantile(x, c(.25, .75), na.rm=TRUE),y)
+  paste(median, " (",tiles[1], " - ", tiles[2], ")",sep="")
+}
+
+rocResult <- function (x) {
+  # predict test data result
+  pr <- predict(x, newdata=test, allow.new.levels=T)
+  pr <- prediction(pr, test$isreadmit30dc)
+  auc <- performance(pr, measure="auc") 
+  auc <- round(auc@y.values[[1]],4)
+  
+  # Generate ROC Curve
+  roc <- performance(pr, measure="tpr", x.measure="fpr")
+  plot(roc, colorize=T)
+  cat("AUC:", auc)
+}
+
+aucResult <- function(x) {
+  # predict test data result
+  pr <- predict(x, newdata=test, allow.new.levels=T)
+  pr <- prediction(pr, test$isreadmit30dc)
+  auc <- performance(pr, measure="auc") 
+  auc <- round(auc@y.values[[1]],4)
+  return(auc)
+}
+
+# create empty list that I will populate with results as we go
+auc <- list()
+```
+
+```{r loaddata, cache=F}
+# Load full dataset (12.5m obs)
+# when loading the full data set, in chunk options set cache.lazy=F
+# pt <- readRDS(file="rao_workingdata/pt.rds")
+
+ptgu <- readRDS("rao_workingdata/ptgu.rds")
+```
+
+# Table 1
+```{r}
+t1 <- ptgu %>%
+  group_by(cohort) %>%
+  summarise(
+    "Cases" = n(),
+    "Hospitals" = n_distinct(oshpd_id),
+    "Age (Median, IQR)" = prettyMedianIQR(agyradm)
+  ) %>%
+  t()%>% as.data.frame(stringsAsFactors=F) 
+colnames(t1) <- t1[1,]
+t1 <- t1[-1,]
+kable(t1)
+
+
+```
