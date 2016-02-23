@@ -163,11 +163,11 @@ dsh <- dsh %>%
   right_join(dsh)
 
 # classify safety net hospitals as top quintile of DSH percentage
-dsh$safetydsh <- factor(ifelse(dsh$dshquintile==5, "Yes", "No"))
+dsh$safetydsh <- factor(ifelse(dsh$dshquintile==5, T, F))
 
 # Assign Safety Net status based on NAPH membership
 # assign all hospitals as "no", then tag specific hospitals as YES
-dsh$safetynaph <- "No"
+dsh$safetynaph <- F
 
 # Listing of safety net list from California Association of Public Hospitals and Health Systems
 # http://caph.org/caphmemberhospitals/memberdirectory/
@@ -176,7 +176,7 @@ dsh$safetynaph <- "No"
 safetynaph <- c(50320, 50211, 50276, 50315, 50373, 50376, 50040, 50717, 50262, 50248, 50348, 50292, 50599,
                 50245, 50025, 50228, 50668, 50454, 50167, 50113, 50038, 50159)
 
-dsh$safetynaph[dsh$providerid %in% safetynaph] <- "Yes"
+dsh$safetynaph[dsh$providerid %in% safetynaph] <- T
 rm(safetynaph)
 
 saveRDS(dsh, file="rao_workingdata/dsh.rds")

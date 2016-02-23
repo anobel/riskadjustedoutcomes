@@ -1,11 +1,11 @@
-library(reshape2)
+# library(reshape2)
 library(stringr)
 library(acs)
 library(dplyr)
 
 # to use the ACS package to directly download ACS data, need to sign up for API key and install it (once)
 #api.key.install("d5481ffa6d9e8cb41a08e565fbd4d6baa46cf350")
-load("rao_workingdata/zcta.rda")
+zcta <- readRDS("rao_workingdata/zcta.rds")
 
 # define the geographic unit (ZCTAs) for data
 # this cannot be combined with any other options, so get all ZCTAs then drop non-CA
@@ -168,6 +168,7 @@ acs$hoodzscore <- rowSums(cbind(acsz$medianincomelog, acsz$housevalue, acsz$capi
 
 # Assign quintiles
 acs$hoodquint <- factor(ntile(acs$hoodzscore, 5))
+acs$hooddecile <- factor(ntile(acs$hoodzscore, 10))
 
 # Create centered and scaled variables, useful for regression interpretation
 # Zip code population for every 10,000 people
@@ -188,7 +189,7 @@ acs <- acs %>%
          medianincome, medianincome1k, incomeunder25k, incomeover100k, capincome, 
          housevalue, housevalue100k,
          edunohs, eduhs, educollege, empexec,
-         gini, iceinc, iceedu, iceeth, hoodzscore, hoodquint)
+         gini, iceinc, iceedu, iceeth, hoodzscore, hoodquint, hooddecile)
 
 # Save into RDS
 saveRDS(acs, file="rao_workingdata/acs.rds")
