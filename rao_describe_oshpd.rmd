@@ -9,7 +9,7 @@ output:
         css: floating.css
         toc: yes
 params:
-    cohort: "Cystectomy"
+    cohort: "PartialNx"
 ---
 
 ```{r global_options, include=FALSE}
@@ -116,7 +116,7 @@ ptgu[,toscale] <- data.frame(lapply(ptgu[,toscale], scale, center=T, scale=T))
 rm(toscale)
 
 # make a disease specific cohort based on the parameter selected
-# params <- list(); params$cohort="RadNx"
+# params <- list(); params$cohort="Cystectomy"
 ptgucohort <- ptgu %>% filter(cohort==params$cohort)
 
 # split data into training and validation cohorts
@@ -350,7 +350,6 @@ auc$me4$auc <- aucResult(me4)
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Neighborhood Z-Score (continuous), Ethnicity (% white)
 
-
 ```{r MEmodel4a}
 me4a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite, data=train, family="binomial")
 
@@ -365,7 +364,6 @@ auc$me4a$auc <- aucResult(me4a)
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Neighborhood Z-Score (continuous), Ethnicity (% black)
-
 
 ```{r MEmodel4b}
 me4b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethblack, data=train, family="binomial")
@@ -382,15 +380,89 @@ auc$me4b$auc <- aucResult(me4b)
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - SES: Neighborhood Z-Score (quintile)
 
-
-```{r MEmodel5}
-me5 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodquint, data=train, family="binomial")
+```{r MEmodel5a}
+me5a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodquint, data=train, family="binomial")
 
 # print raw results of regression
-summary(me5)
-rocResult(me5)
-auc$me5$formula <- as.character(me5$call)[2]
-auc$me5$auc <- aucResult(me5)
+summary(me5a)
+rocResult(me5a)
+auc$me5a$formula <- as.character(me5a$call)[2]
+auc$me5a$auc <- aucResult(me5a)
+```
+
+## HoodZ Quintile + Eth
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Neighborhood Z-Score (quintile), Eth White
+
+```{r MEmodel5aethw}
+me5aethw <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodquint + ethwhite, data=train, family="binomial")
+
+# print raw results of regression
+summary(me5aethw)
+rocResult(me5aethw)
+auc$me5aethw$formula <- as.character(me5aethw$call)[2]
+auc$me5aethw$auc <- aucResult(me5aethw)
+```
+
+## HoodZ Lowest Quintile
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Neighborhood Z-Score (lowest quintile)
+
+```{r MEmodel5b}
+me5b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + lowestquint, data=train, family="binomial")
+
+# print raw results of regression
+summary(me5b)
+rocResult(me5b)
+auc$me5b$formula <- as.character(me5b$call)[2]
+auc$me5b$auc <- aucResult(me5b)
+```
+
+## HoodZ Lowest Quintile Eth White
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Neighborhood Z-Score (lowest quintile), Eth White
+
+```{r MEmodel5bethw}
+me5bethw <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + lowestquint + ethwhite, data=train, family="binomial")
+
+# print raw results of regression
+summary(me5bethw)
+rocResult(me5bethw)
+auc$me5bethw$formula <- as.character(me5bethw$call)[2]
+auc$me5bethw$auc <- aucResult(me5bethw)
+```
+
+## HoodZ Lowest Decile
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Neighborhood Z-Score (lowest decile)
+
+```{r MEmodel5c}
+me5c <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + lowestdecile, data=train, family="binomial")
+
+# print raw results of regression
+summary(me5c)
+rocResult(me5c)
+auc$me5c$formula <- as.character(me5c$call)[2]
+auc$me5c$auc <- aucResult(me5c)
+```
+
+## HoodZ Lowest Decile, Eth White
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Neighborhood Z-Score (lowest decile), Eth White
+
+```{r MEmodel5cethw}
+me5cethw <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + lowestdecile + ethwhite, data=train, family="binomial")
+
+# print raw results of regression
+summary(me5cethw)
+rocResult(me5cethw)
+auc$me5cethw$formula <- as.character(me5cethw$call)[2]
+auc$me5cethw$auc <- aucResult(me5cethw)
 ```
 
 ## Elix Index, HoodZ
@@ -1168,8 +1240,7 @@ auc$me50$auc <- aucResult(me50)
 - Hospital Stay: LOS, mortality
 
 ```{r MEmodel60}
-fmla <- as.formula(paste("isreadmit30dc ~ agyradmcentered + sex + safetynaph + hoodzscore +  ethwhite + residency  + disp + ru +", paste(elixComorbidNamesAbbrev, collapse="+"), ""))
-
+fmla <- as.formula(paste("isreadmit30dc ~ agyradmcentered + sex + safetynaph+ hoodzscore +  ethwhite + residency  + disp + ru +", paste(elixComorbidNamesAbbrev, collapse="+"), ""))
 
 me60 <- glm(fmla, data=train, family="binomial")
 
