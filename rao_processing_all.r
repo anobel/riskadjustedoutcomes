@@ -171,8 +171,15 @@ ptgu$disp[ptgu$disp=="Other Care Level-Other Facility"] <- "Other"
 # drop levels
 ptgu <- droplevels(ptgu)
 
-saveRDS(ptgu, file="rao_workingdata/ptgu.rds")
 
+# assign lowest quintile/decile
+ptgu$lowestquint <- F
+ptgu$lowestquint[ptgu$hoodquint==1] <- T
+
+ptgu$lowestdecile <- F
+ptgu$lowestdecile[ptgu$hooddecile==1] <- T
+
+saveRDS(ptgu, file="rao_workingdata/ptgu.rds")
 # Make a subsample of 100k and save as a smaller dataset
 # ptlite <- pt %>% ungroup() %>% sample_n(100000, replace=F) %>% droplevels()
 # saveRDS(ptlite, file="rao_workingdata/ptlite.rds")
