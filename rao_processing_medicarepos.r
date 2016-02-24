@@ -73,10 +73,7 @@ filter(state=="CA")
 mpdata <- mpdata %>%
   group_by(providerid) %>%
   dplyr::summarise(residentnum = max(residents, na.rm=T)) %>%
-  mutate(residency = ifelse(residentnum>0, "Yes", "No"))
-
-# create factor variable
-mpdata$residency <- factor(mpdata$residency)
+  mutate(residency = ifelse(residentnum>0, T, F))
 
 mpdata$providerid <- as.numeric(mpdata$providerid)
 
@@ -93,8 +90,9 @@ mpdata <- mpdata %>%
   left_join(residencygu)
 
 # if NA, assign it as No
-mpdata$residencygu[is.na(mpdata$residencygu)] <- "No"
-mpdata$residencygu <- factor(mpdata$residencygu)
+mpdata$residencygu[mpdata$residencygu=="Yes"] <- T
+mpdata$residencygu[is.na(mpdata$residencygu)] <- F
+mpdata$residencygu <- as.logical(mpdata$residencygu)
 
 # Save data
 saveRDS(mpdata, file="rao_workingdata/residents.rds")
