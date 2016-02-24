@@ -27,7 +27,7 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, ca
 ```{r packages, cache=F}
 # Data Cleaning Packages
 library(dplyr)
-
+library(stringr)
 # Graphics Packages
 library(DT)
 library(ggplot2)
@@ -50,8 +50,8 @@ main2 <- "#92c5de"
 acc2 <- "#0571b0"
 # this function takes arguments x=value, y=number of sig figs, prints mean +/- SD in html
 prettyMeanSD <- function (x,y) {
-  mean <- prettyNum(round(mean(x, na.rm=TRUE),y), big.mark = ",")
-  sd <-  prettyNum(round(sd(x, na.rm=TRUE),y), big.mark = ",")
+  mean <- prettyNum(sprintf(paste0("%.",y,"f"), mean(x, na.rm=T)), big.mark=",")
+  sd <-  prettyNum(sprintf(paste0("%.",y,"f"), sd(x, na.rm=TRUE),y), big.mark = ",")
   paste(mean, " &plusmn; ",sd,sep="")
 }
 
@@ -108,6 +108,7 @@ t1 <- ptgu %>%
     "In-Hospital Mortality (%)" = sprintf("%.1f", mean(cohortmortality, na.rm=T)),
     "30d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit30dc)/n()),
     "90d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit90dc)/n()),
+    "Elixhauser Sum" = prettyMeanSD(elixsum,1),
     "Diez-Roux Score" = prettyMedianIQR(hoodzscore,2),
     "Median Household Income ($1k)" = prettyMedianIQR(medianincome1k,1),
     "Home Value ($100k)" = prettyMedianIQR(.001*housevalue,0),
@@ -150,6 +151,10 @@ t1p["30d Readmission Rate (%)",1] <- format.pval(
 
 t1p["90d Readmission Rate (%)",1] <- format.pval(
   chisq.test(ptgu$cohort, ptgu$isreadmit90dc)$p.value,
+  eps=.001, digits=3)
+
+t1p["Elixhauser Sum",1] <- format.pval(
+  summary(aov(elixsum ~ cohort, data=ptgu))[[1]][1,5],
   eps=.001, digits=3)
 
 t1p["Diez-Roux Score",1] <- format.pval(
@@ -237,16 +242,108 @@ t1p["Dispo: Home (%)",1] <- format.pval(
   eps=.001, digits=3)
 
 t1p[is.na(t1p)] <- ""
-
 t1f <- cbind(t1, t1p)
 
 kable(t1f)
 ```
 
+# Table 2
 ```{r table2}
+t2 <- ptgu %>%
+  filter(cohort %in% c("Cystectomy", "PartialNx", "RadNx")) %>%
+  group_by(cohort, isreadmit30dc) %>%
+  dplyr::summarise(
+    "Cases" = prettyNum(n(), big.mark=","),
+    "Age (Median, IQR)" = prettyMedianIQR(agyradm,0),
+    "Elixhauser Sum" = prettyMeanSD(elixsum,1),
+    "Diez-Roux Score" = prettyMedianIQR(hoodzscore,2),
+    "Median Household Income ($1k)" = prettyMedianIQR(medianincome1k,1),
+    "Home Value ($100k)" = prettyMedianIQR(.001*housevalue,0),
+    "% with Capital Gains Income" = prettyMedianIQR(capincome,1),
+    "% Completed High School" = prettyMedianIQR(eduhs,1),
+    "% Completed College" = prettyMedianIQR(educollege,1),
+    "% Prof Occupations" = prettyMedianIQR(empexec,1),
+    "Ethnicity: % White" = prettyMedianIQR(ethwhite, 1),
+    "Ethnicity: % Black" = prettyMedianIQR(ethblack,1),
+    "Ethnicity: % Hispanic" = prettyMedianIQR(ethlatin,1),
+    "Ethnicity: % Asian" = prettyMedianIQR(ethasian,1),
+    "Rural (Patient) (%)" = sprintf("%.1f", 100*sum(ru=="Rural", na.rm=T)/n()),
+    "Distance to Hospital (km)" = prettyMedianIQR(km,1),
+    "Hospital Volume" = prettyMedianIQR(volume/5,1),
+    "Safety Net - DSH (%)" = sprintf("%.1f %%", 100*sum(safetydsh, na.rm=T)/n()),
+    "Safety Net - NAPH (%)" = sprintf("%.1f %%", 100*sum(safetynaph, na.rm=T)/n()),
+    "Academic Hospital (%)" = sprintf("%.1f %%", 100*sum(residency, na.rm=T)/n()),
+    "Urology Residency Affiliation (%)" = sprintf("%.1f %%", 100*sum(residencygu, na.rm=T)/n()),
+    "Length of Stay" = prettyMedianIQR(los,1),
+    "Dispo: Home (%)" = sprintf("%.1f", 100*sum(disp=="Home")/n()),
+    "Dispo: Home Health (%)" = sprintf("%.1f", 100*sum(disp=="Home Health")/n()),
+    "Dispo: SNF (%)" = sprintf("%.1f", 100*sum(disp=="SNF")/n()),
+    "Dispo: Residential Care (%)" = sprintf("%.1f", 100*sum(disp=="Residential Care")/n()),
+    "Dispo: AMA (%)" = sprintf("%.1f", 100*sum(disp=="AMA")/n()),
+    "Dispo: Other (%)" = sprintf("%.1f", 100*sum(disp=="Other")/n())
+  ) %>%
+  t()%>% as.data.frame(stringsAsFactors=F)
 
+# Reassign column names, format
+t2names <- colnames(t2)
+t2names <- paste(t2[1,], str_trim(t2[2,]))
+t2names <- str_replace_all(t2names, "FALSE", "Not Readmitted")
+t2names <- str_replace_all(t2names, "TRUE", "Readmitted")
 
+colnames(t2) <- t2names
+t2 <- t2[3:nrow(t2),]
+rm(t2names)
 
+t2p <- ptgu %>%
+  filter(cohort %in% c("Cystectomy", "PartialNx", "RadNx")) %>%
+  group_by(cohort) %>%
+  do(
+    "Age (Median, IQR)" = t.test(agyradm ~ isreadmit30dc, data=.)$p.value,
+    "Elixhauser Sum" = t.test(elixsum ~ isreadmit30dc, data=.)$p.value,
+    "Diez-Roux Score" = t.test(hoodzscore ~ isreadmit30dc, data=.)$p.value,
+    "Median Household Income ($1K)" = t.test(medianincome1k ~ isreadmit30dc, data=.)$p.value,
+    "Home Value ($100k)" = t.test(housevalue ~ isreadmit30dc, data=.)$p.value,
+    "% with Capital Gains Income" = t.test(capincome ~ isreadmit30dc, data=.)$p.value,
+    "% Completed High School" = t.test(eduhs ~ isreadmit30dc, data=.)$p.value,
+    "% Completed College" = t.test(educollege ~ isreadmit30dc, data=.)$p.value,
+    "% Prof Occupations" = t.test(empexec ~ isreadmit30dc, data=.)$p.value,
+    "Ethnicity: % White" = t.test(ethwhite ~ isreadmit30dc, data=.)$p.value,
+    "Ethnicity: % Black" = t.test(ethblack ~ isreadmit30dc, data=.)$p.value,
+    "Ethnicity: % Hispanic" = t.test(ethlatin ~ isreadmit30dc, data=.)$p.value,
+    "Ethnicity: % Asian" = t.test(ethasian ~ isreadmit30dc, data=.)$p.value,
+    "Rural (Patient) (%)" = chisq.test(.$ru, .$isreadmit30dc)$p.value,
+    "Distance to Hospital (km)" = t.test(km ~ isreadmit30dc, data=.)$p.value,
+    "Hospital Volume" = t.test(volume ~ isreadmit30adm, data=.)$p.value,
+    "Safety Net - DSH (%)" = chisq.test(.$safetydsh, .$isreadmit30dc)$p.value,
+    "Safety Net - NAPH (%)" = chisq.test(.$safetynaph, .$isreadmit30dc)$p.value,
+    "Academic Hospital (%)" = chisq.test(.$residency, .$isreadmit30dc)$p.value,
+    "Urology Residency Affiliation (%)" = chisq.test(.$residencygu, .$isreadmit30dc)$p.value,
+    "Length of Stay" = t.test(los ~ isreadmit30adm, data=.)$p.value,
+    "Dispo: Home (%)" = chisq.test(.$disp, .$isreadmit30dc, simulate.p.value=T)$p.value
+    ) %>% t() %>% as.data.frame()
+
+t2pcols <- unlist(t2p[1,])
+t2prows <- rownames(t2p)[-1]
+t2p <- as.data.frame(matrix(unlist(t2p), nrow=nrow(t2p)), stringsAsFactors = F)
+t2p <- t2p[-1,]
+
+t2p <- as.data.frame(lapply(t2p, as.numeric))
+
+t2p <- as.data.frame(lapply(t2p, format.pval, eps=0.001, digits=2), stringsAsFactors=F)
+
+colnames(t2p) <- paste(t2pcols, "p-value", sep="_")
+t2p$id <- t2prows
+
+t2$id <- row.names(t2)
+t2f <- left_join(t2, t2p)
+t2f[is.na(t2f)] <- ""
+
+rownames(t2f) <- t2f$id
+t2f$id <- NULL
+
+t2f <- t2f[(sort(colnames(t2f)))]
+
+kable(t2f)
 ```
 
 ```{r figures, eval=F}
