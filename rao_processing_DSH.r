@@ -163,7 +163,7 @@ dsh <- dsh %>%
   right_join(dsh)
 
 # classify safety net hospitals as top quintile of DSH percentage
-dsh$safetydsh <- factor(ifelse(dsh$dshquintile==5, T, F))
+dsh$safetydsh <- ifelse(dsh$dshquintile==5, T, F)
 
 # Assign Safety Net status based on NAPH membership
 # assign all hospitals as "no", then tag specific hospitals as YES
