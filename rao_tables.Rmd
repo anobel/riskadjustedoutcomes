@@ -13,7 +13,7 @@ params:
 ---
 
 ```{r global_options, include=FALSE}
-knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=F)
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=T)
 ```
 
 <!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
@@ -37,7 +37,7 @@ library(RColorBrewer)
 library(stargazer)
 
 # Specialty/Stats Packages
-library(icd9)
+# library(icd9)
 library(ROCR)
 library(lme4)
 ```
@@ -56,9 +56,11 @@ prettyMeanSD <- function (x,y) {
 }
 
 prettyMedianIQR <- function (x,y) {
-  median <- prettyNum(round(median(x, na.rm=TRUE),y), big.mark = ",")
-  tiles <- round(quantile(x, c(.25, .75), na.rm=TRUE),y)
-  paste(median, " (",tiles[1], " - ", tiles[2], ")",sep="")
+  median <- prettyNum(sprintf(paste0("%.",y,"f"), median(x, na.rm=T)), big.mark=",")
+  tiles <- quantile(x, c(.25, .75), na.rm=TRUE)
+  tile25 <- prettyNum(sprintf(paste0("%.",y,"f"), tiles[1]), big.mark=",")
+  tile75 <- prettyNum(sprintf(paste0("%.",y,"f"), tiles[2]), big.mark=",")
+  paste0(median, " (",tile25, " - ", tile75, ")")
 }
 
 rocResult <- function (x) {
@@ -96,18 +98,161 @@ ptgu <- readRDS("rao_workingdata/ptgu.rds")
 ```
 
 # Table 1
-```{r}
+```{r table1}
 t1 <- ptgu %>%
   group_by(cohort) %>%
-  summarise(
-    "Cases" = n(),
-    "Hospitals" = n_distinct(oshpd_id),
-    "Age (Median, IQR)" = prettyMedianIQR(agyradm)
+  dplyr::summarise(
+    "Cases" = prettyNum(n(), big.mark=","),
+    "Hospitals" = prettyNum(n_distinct(oshpd_id), big.mark=","),
+    "Age (Median, IQR)" = prettyMedianIQR(agyradm,0),
+    "In-Hospital Mortality (%)" = sprintf("%.1f", mean(cohortmortality, na.rm=T)),
+    "30d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit30dc)/n()),
+    "90d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit90dc)/n()),
+    "Diez-Roux Score" = prettyMedianIQR(hoodzscore,2),
+    "Median Household Income ($1k)" = prettyMedianIQR(medianincome1k,1),
+    "Home Value ($100k)" = prettyMedianIQR(.001*housevalue,0),
+    "% with Capital Gains Income" = prettyMedianIQR(capincome,1),
+    "% Completed High School" = prettyMedianIQR(eduhs,1),
+    "% Completed College" = prettyMedianIQR(educollege,1),
+    "% Prof Occupations" = prettyMedianIQR(empexec,1),
+    "Ethnicity: % White" = prettyMedianIQR(ethwhite, 1),
+    "Ethnicity: % Black" = prettyMedianIQR(ethblack,1),
+    "Ethnicity: % Hispanic" = prettyMedianIQR(ethlatin,1),
+    "Ethnicity: % Asian" = prettyMedianIQR(ethasian,1),
+    "Rural (Patient) (%)" = sprintf("%.1f", 100*sum(ru=="Rural", na.rm=T)/n()),
+    "Distance to Hospital (km)" = prettyMedianIQR(km,1),
+    "Hospital Volume" = prettyMedianIQR(volume/5,1),
+    "Safety Net - DSH (%)" = sprintf("%.1f %%", 100*sum(safetydsh, na.rm=T)/n()),
+    "Safety Net - NAPH (%)" = sprintf("%.1f %%", 100*sum(safetynaph, na.rm=T)/n()),
+    "Academic Hospital (%)" = sprintf("%.1f %%", 100*sum(residency, na.rm=T)/n()),
+    "Urology Residency Affiliation (%)" = sprintf("%.1f %%", 100*sum(residencygu, na.rm=T)/n()),
+    "Length of Stay" = prettyMedianIQR(los,1),
+    "Dispo: Home (%)" = sprintf("%.1f", 100*sum(disp=="Home")/n()),
+    "Dispo: Home Health (%)" = sprintf("%.1f", 100*sum(disp=="Home Health")/n()),
+    "Dispo: SNF (%)" = sprintf("%.1f", 100*sum(disp=="SNF")/n()),
+    "Dispo: Residential Care (%)" = sprintf("%.1f", 100*sum(disp=="Residential Care")/n()),
+    "Dispo: AMA (%)" = sprintf("%.1f", 100*sum(disp=="AMA")/n()),
+    "Dispo: Other (%)" = sprintf("%.1f", 100*sum(disp=="Other")/n())
   ) %>%
   t()%>% as.data.frame(stringsAsFactors=F) 
 colnames(t1) <- t1[1,]
 t1 <- t1[-1,]
-kable(t1)
+
+t1p <- data.frame("Pvalue"=matrix(nrow=nrow(t1), ncol=1), row.names=rownames(t1))
+
+t1p["In-Hospital Mortality (%)",1] <- format.pval(
+  summary(aov(cohortmortality ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["30d Readmission Rate (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$isreadmit30dc)$p.value,
+  eps=.001, digits=3)
+
+t1p["90d Readmission Rate (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$isreadmit90dc)$p.value,
+  eps=.001, digits=3)
+
+t1p["Diez-Roux Score",1] <- format.pval(
+  summary(aov(hoodzscore ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Median Household Income ($1k)",1] <- format.pval(
+  summary(aov(medianincome1k ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Home Value ($100k)",1] <- format.pval(
+  summary(aov(housevalue ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["% with Capital Gains Income",1] <- format.pval(
+  summary(aov(capincome ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["% Completed High School",1] <- format.pval(
+  summary(aov(eduhs ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["% Completed College",1] <- format.pval(
+  summary(aov(educollege ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["% Prof Occupations",1] <- format.pval(
+  summary(aov(empexec ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % White",1] <- format.pval(
+  summary(aov(ethwhite ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % Black",1] <- format.pval(
+  summary(aov(ethblack ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % Hispanic",1] <- format.pval(
+  summary(aov(ethlatin ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % Asian",1] <- format.pval(
+  summary(aov(ethasian ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % Black",1] <- format.pval(
+  summary(aov(ethblack ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Rural (Patient) (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$ru)$p.value,
+  eps=.001, digits=3)
+
+t1p["Distance to Hospital (km)",1] <- format.pval(
+  summary(aov(km ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Hospital Volume",1] <- format.pval(
+  summary(aov(volume ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Safety Net - DSH (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$safetydsh)$p.value,
+  eps=.001, digits=3)
+
+t1p["Safety Net - NAPH (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$safetynaph)$p.value,
+  eps=.001, digits=3)
+
+t1p["Academic Hospital (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$residency)$p.value,
+  eps=.001, digits=3)
+
+t1p["Urology Residency Affiliation (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$residencygu)$p.value,
+  eps=.001, digits=3)
+
+t1p["Length of Stay",1] <- format.pval(
+  summary(aov(los ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Dispo: Home (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$disp, simulate.p.value = T)$p.value,
+  eps=.001, digits=3)
+
+t1p[is.na(t1p)] <- ""
+
+t1f <- cbind(t1, t1p)
+
+kable(t1f)
+```
+
+```{r table2}
 
 
+
+```
+
+```{r figures, eval=F}
+ggplot(ptgu, aes(fill=cohort)) +
+    geom_histogram(aes(y=..density.., x=medianincome), colour="black") +
+    facet_grid(cohort ~ .) +
+  theme_few() +
+  scale_color_few(palette="dark")
 ```
