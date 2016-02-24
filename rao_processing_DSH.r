@@ -1,4 +1,3 @@
-# library(plyr)
 library(stringr)
 library(ggmap)
 library(dplyr)
@@ -150,10 +149,11 @@ rm(titlecase)
 dsh$dsh_pct <- dsh$dsh_pct*100
 dsh$mcr_pct <- dsh$mcr_pct*100
 
+
 # Assign hospitals to quintiles
 dsh <- dsh %>%
   group_by(providerid) %>%
-  summarise(
+  dplyr::summarise(
     dshMean = mean(dsh_pct, na.rm=T)
   ) %>%
   mutate(
