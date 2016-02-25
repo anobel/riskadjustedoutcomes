@@ -677,21 +677,6 @@ auc$me13$formula <- as.character(me13$call)[2]
 auc$me13$auc <- aucResult(me13)
 ```
 
-## Edu(No College)
-- Outcome: 30 day readmission from date discharge date after index admission
-- Predictors: age (10yrs), sex, Elixhauser Sum
-- SES: Education (% that did not complete College)
-
-```{r MEmodel14}
-me14 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + eduhs, data=train, family="binomial")
-
-# print raw results of regression
-summary(me14)
-rocResult(me14)
-auc$me14$formula <- as.character(me14$call)[2]
-auc$me14$auc <- aucResult(me14)
-```
-
 ## Edu(College)
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
