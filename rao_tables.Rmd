@@ -123,10 +123,16 @@ t1 <- ptgu %>%
     "Rural (Patient) (%)" = sprintf("%.1f", 100*sum(ru=="Rural", na.rm=T)/n()),
     "Distance to Hospital (km)" = prettyMedianIQR(km,1),
     "Hospital Volume" = prettyMedianIQR(volume/5,1),
-    "Safety Net - DSH (%)" = sprintf("%.1f %%", 100*sum(safetydsh, na.rm=T)/n()),
-    "Safety Net - NAPH (%)" = sprintf("%.1f %%", 100*sum(safetynaph, na.rm=T)/n()),
-    "Academic Hospital (%)" = sprintf("%.1f %%", 100*sum(residency, na.rm=T)/n()),
-    "Urology Residency Affiliation (%)" = sprintf("%.1f %%", 100*sum(residencygu, na.rm=T)/n()),
+    "Safety Net - DSH (%)" = sprintf("%.1f", 100*sum(safetydsh, na.rm=T)/n()),
+    "Safety Net - NAPH (%)" = sprintf("%.1f", 100*sum(safetynaph, na.rm=T)/n()),
+    "Academic Hospital (%)" = sprintf("%.1f", 100*sum(residency, na.rm=T)/n()),
+    "Urology Residency (%)" = sprintf("%.1f", 100*sum(residencygu, na.rm=T)/n()),
+    "Payer: Medicare (%)" = sprintf("%.1f", 100*sum(pay_cat=="Medicare")/n()),
+    "Payer: Medi-Cal (%)" = sprintf("%.1f", 100*sum(pay_cat=="Medi-Cal")/n()),
+    "Payer: Private (%)" = sprintf("%.1f", 100*sum(pay_cat=="Private")/n()),
+    "Payer: County Indigent (%)" = sprintf("%.1f", 100*sum(pay_cat=="County Indigent")/n()),
+    "Payer: Self Pay (%)" = sprintf("%.1f", 100*sum(pay_cat=="Self Pay")/n()),
+    "Payer: Other Govt (%)" = sprintf("%.1f", 100*sum(pay_cat=="Other Govt")/n()),
     "Length of Stay" = prettyMedianIQR(los,1),
     "Dispo: Home (%)" = sprintf("%.1f", 100*sum(disp=="Home")/n()),
     "Dispo: Home Health (%)" = sprintf("%.1f", 100*sum(disp=="Home Health")/n()),
@@ -229,7 +235,7 @@ t1p["Academic Hospital (%)",1] <- format.pval(
   chisq.test(ptgu$cohort, ptgu$residency)$p.value,
   eps=.001, digits=3)
 
-t1p["Urology Residency Affiliation (%)",1] <- format.pval(
+t1p["Urology Residency (%)",1] <- format.pval(
   chisq.test(ptgu$cohort, ptgu$residencygu)$p.value,
   eps=.001, digits=3)
 
@@ -239,6 +245,10 @@ t1p["Length of Stay",1] <- format.pval(
 
 t1p["Dispo: Home (%)",1] <- format.pval(
   chisq.test(ptgu$cohort, ptgu$disp, simulate.p.value = T)$p.value,
+  eps=.001, digits=3)
+
+t1p["Payer: Medicare (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$pay_cat, simulate.p.value = T)$p.value,
   eps=.001, digits=3)
 
 t1p[is.na(t1p)] <- ""
@@ -270,10 +280,16 @@ t2 <- ptgu %>%
     "Rural (Patient) (%)" = sprintf("%.1f", 100*sum(ru=="Rural", na.rm=T)/n()),
     "Distance to Hospital (km)" = prettyMedianIQR(km,1),
     "Hospital Volume" = prettyMedianIQR(volume/5,1),
-    "Safety Net - DSH (%)" = sprintf("%.1f %%", 100*sum(safetydsh, na.rm=T)/n()),
-    "Safety Net - NAPH (%)" = sprintf("%.1f %%", 100*sum(safetynaph, na.rm=T)/n()),
-    "Academic Hospital (%)" = sprintf("%.1f %%", 100*sum(residency, na.rm=T)/n()),
-    "Urology Residency Affiliation (%)" = sprintf("%.1f %%", 100*sum(residencygu, na.rm=T)/n()),
+    "Safety Net - DSH (%)" = sprintf("%.1f", 100*sum(safetydsh, na.rm=T)/n()),
+    "Safety Net - NAPH (%)" = sprintf("%.1f", 100*sum(safetynaph, na.rm=T)/n()),
+    "Academic Hospital (%)" = sprintf("%.1f", 100*sum(residency, na.rm=T)/n()),
+    "Urology Residency (%)" = sprintf("%.1f", 100*sum(residencygu, na.rm=T)/n()),
+    "Payer: Medicare (%)" = sprintf("%.1f", 100*sum(pay_cat=="Medicare")/n()),
+    "Payer: Medi-Cal (%)" = sprintf("%.1f", 100*sum(pay_cat=="Medi-Cal")/n()),
+    "Payer: Private (%)" = sprintf("%.1f", 100*sum(pay_cat=="Private")/n()),
+    "Payer: County Indigent (%)" = sprintf("%.1f", 100*sum(pay_cat=="County Indigent")/n()),
+    "Payer: Self Pay (%)" = sprintf("%.1f", 100*sum(pay_cat=="Self Pay")/n()),
+    "Payer: Other Govt (%)" = sprintf("%.1f", 100*sum(pay_cat=="Other Govt")/n()),
     "Length of Stay" = prettyMedianIQR(los,1),
     "Dispo: Home (%)" = sprintf("%.1f", 100*sum(disp=="Home")/n()),
     "Dispo: Home Health (%)" = sprintf("%.1f", 100*sum(disp=="Home Health")/n()),
@@ -317,7 +333,8 @@ t2p <- ptgu %>%
     "Safety Net - DSH (%)" = chisq.test(.$safetydsh, .$isreadmit30dc)$p.value,
     "Safety Net - NAPH (%)" = chisq.test(.$safetynaph, .$isreadmit30dc)$p.value,
     "Academic Hospital (%)" = chisq.test(.$residency, .$isreadmit30dc)$p.value,
-    "Urology Residency Affiliation (%)" = chisq.test(.$residencygu, .$isreadmit30dc)$p.value,
+    "Urology Residency (%)" = chisq.test(.$residencygu, .$isreadmit30dc)$p.value,
+    "Payer: Medicare (%)" = chisq.test(.$pay_cat, .$isreadmit30dc)$p.value,
     "Length of Stay" = t.test(los ~ isreadmit30adm, data=.)$p.value,
     "Dispo: Home (%)" = chisq.test(.$disp, .$isreadmit30dc, simulate.p.value=T)$p.value
     ) %>% t() %>% as.data.frame()

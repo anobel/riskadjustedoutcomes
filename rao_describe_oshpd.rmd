@@ -168,10 +168,31 @@ ptgu %>%
 ```
 
 ## Readmissions
-Overall 30 day Readmission Rate (%)
-```{r overall30dReadmissionRate, results="asis"}
-t <- round(100*prop.table(table(ptgu$isreadmit30dc, ptgu$cohort),2),2)
-kable(t)
+Overall Readmission Rates (%)
+```{r overallReadmissionRate, results="asis"}
+ptgu %>%
+  group_by(cohort) %>%
+  summarise(
+    "30 Day Readmission" = sprintf("% .2f%%", 100*sum(isreadmit30dc)/n()),
+    "90 Day Readmission" = sprintf("% .2f%%", 100*sum(isreadmit90dc)/n())
+  ) %>% 
+  kable()
+```
+
+```{r}
+t <- ptgu %>%
+  group_by(cohort) %>%
+  filter(readmitdaysdc>0 & readmitdaysdc<90) %>%
+  mutate(totalreadmits = n()) %>%
+  group_by(readmitdaysdc, cohort, totalreadmits) %>%
+  summarise(
+    count = n(),
+    proportion = 100*count/mean(totalreadmits))
+  
+ggplot(t) + 
+  geom_smooth(aes(x=readmitdaysdc, y=proportion, color=cohort), span=0.25, se=F) +
+  theme_few()
+
 ```
 
 ## Disposition
@@ -332,26 +353,11 @@ auc$me3$auc <- aucResult(me3)
 # Diez-Roux Models
 ## HoodZ
 - Outcome: 30 day readmission from date discharge date after index admission
-- Predictors: age (10yrs), sex, Elixhauser Sum
+- Predictors: age (10yrs), sex
 - SES: Neighborhood Z-Score (continuous)
 
-```{r MEmodel4}
-me4 <- glm(isreadmit30dc ~ agyradmcentered + sex  + elixsum + hoodzscore, data=train, family="binomial")
-
-# print raw results of regression
-summary(me4)
-rocResult(me4)
-auc$me4$formula <- as.character(me4$call)[2]
-auc$me4$auc <- aucResult(me4)
-```
-
-## HoodZ EthW
-- Outcome: 30 day readmission from date discharge date after index admission
-- Predictors: age (10yrs), sex, Elixhauser Sum
-- SES: Neighborhood Z-Score (continuous), Ethnicity (% white)
-
 ```{r MEmodel4a}
-me4a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite, data=train, family="binomial")
+me4a <- glm(isreadmit30dc ~ agyradmcentered + sex  + hoodzscore + ethwhite, data=train, family="binomial")
 
 # print raw results of regression
 summary(me4a)
@@ -360,19 +366,49 @@ auc$me4a$formula <- as.character(me4a$call)[2]
 auc$me4a$auc <- aucResult(me4a)
 ```
 
-## HoodZ EthB
+## HoodZ
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
-- SES: Neighborhood Z-Score (continuous), Ethnicity (% black)
+- SES: Neighborhood Z-Score (continuous)
 
 ```{r MEmodel4b}
-me4b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethblack, data=train, family="binomial")
+me4b <- glm(isreadmit30dc ~ agyradmcentered + sex  + elixsum + hoodzscore + ethwhite, data=train, family="binomial")
 
 # print raw results of regression
 summary(me4b)
 rocResult(me4b)
 auc$me4b$formula <- as.character(me4b$call)[2]
 auc$me4b$auc <- aucResult(me4b)
+```
+
+## HoodZ EthW
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Neighborhood Z-Score (continuous), Ethnicity (% white)
+
+```{r MEmodel4c}
+me4c <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite, data=train, family="binomial")
+
+# print raw results of regression
+summary(me4c)
+rocResult(me4c)
+auc$me4c$formula <- as.character(me4c$call)[2]
+auc$me4c$auc <- aucResult(me4c)
+```
+
+## HoodZ EthB
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- SES: Neighborhood Z-Score (continuous), Ethnicity (% black)
+
+```{r MEmodel4d}
+me4d <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethblack, data=train, family="binomial")
+
+# print raw results of regression
+summary(me4d)
+rocResult(me4d)
+auc$me4d$formula <- as.character(me4d$call)[2]
+auc$me4d$auc <- aucResult(me4d)
 ```
 
 ## HoodZ Quintile
@@ -479,7 +515,7 @@ me6 <- glm(fmla, data=train, family="binomial")
 # print raw results of regression
 summary(me6)
 rocResult(me6)
-auc$me6$formula <- fmla[3]
+auc$me6$formula <- as.character(fmla[3])
 auc$me6$auc <- aucResult(me6)
 ```
 
@@ -496,7 +532,7 @@ me6a <- glm(fmla, data=train, family="binomial")
 # print raw results of regression
 summary(me6a)
 rocResult(me6a)
-auc$me6a$formula <- fmla[3]
+auc$me6a$formula <- as.character(fmla[3])
 auc$me6a$auc <- aucResult(me6a)
 ```
 
@@ -513,7 +549,7 @@ me6b <- glm(fmla, data=train, family="binomial")
 # print raw results of regression
 summary(me6b)
 rocResult(me6b)
-auc$me6b$formula <- fmla[3]
+auc$me6b$formula <- as.character(fmla[3])
 auc$me6b$auc <- aucResult(me6b)
 ```
 
