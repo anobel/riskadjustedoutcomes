@@ -70,6 +70,9 @@ codes$SxRP <- c("605", "6050")
 # RPLND Procedure Codes (Mossanen 2014)
 codes$SxRPLND <- c("590", "5900", "5902", "5909", "4029", "403", "4052", "4059")
 
+# Codes for lap or robot
+codes$minimal <- c("1742", "1743", "1744", "1749", "5421")
+
 ##################
 #### Import Data
 ##################
@@ -498,6 +501,11 @@ pt$cohort[cohort$SxRP>0 & cohort$DxProstateCa>0 & cohort$DxKidneyCa>0 & (cohort$
 # Testis and Kidney cancer, RPLND and Radical or Partial Nx
 pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0) & pt$sex!="Male"] <- "Multiple GU Sx"
 
+# assign if case was Open or Lap/Robot
+pt$open <- ifelse(
+  rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$minimal)))==0,
+  T,F)
+
 # Calculate mean annual number of procedures per hospital for each category, and assign quintiles
 # generate years variable, which counts number of years of data included
 # It is 5, but in case we include additional data in future
@@ -536,9 +544,12 @@ pt <- pt %>%
 # Assign LOS quintiles and prolonged LOS
 pt <- pt %>%
   group_by(cohort) %>%
-  mutate(losquint = ntile(los, 5)) %>%
-  mutate(losprolong = ifelse(losquint == 5, T, F))
-
+  mutate(
+    losquint = ntile(los, 5),
+    losdec = ntile(los, 10)) %>%
+  mutate(
+    loslong5 = ifelse(losquint == 5, T, F),
+    loslong10 = ifelse(losdec == 10, T, F))
 
 saveRDS(pt, file="rao_workingdata/pt.rds")
 
