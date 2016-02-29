@@ -1,0 +1,149 @@
+---
+title: "Risk Adjusted Outcomes for Urologic Oncology"
+subtitle: "O/E Evaluation"
+author: "Anobel Y Odisho, Ruth Etzioni, John L Gore"
+date: "`r Sys.Date()`"
+output: 
+  tufterhandout::html_tufte_handout:
+        theme: cosmo
+        css: floating.css
+        toc: yes
+params:
+    cohort: "Cystectomy"
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=F)
+```
+
+<!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
+<style>
+  td {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+</style>
+  
+```{r packages, cache=F}
+# Data Cleaning Packages
+library(lubridate)
+library(dplyr)
+library(stringr)
+library(tidyr)
+
+# Graphics Packages
+library(DT)
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+library(RColorBrewer)
+library(stargazer)
+
+# Specialty/Stats Packages
+library(icd9)
+library(ROCR)
+library(lme4)
+```
+
+```{r constants.functions}
+bg <- "#FCFCFA"
+main1 <- "#ca0020"
+acc1 <- "#f4a582"
+main2 <- "#92c5de"
+acc2 <- "#0571b0"
+
+```
+
+```{r loaddata, cache=F}
+# Load full dataset (12.5m obs)
+# when loading the full data set, in chunk options set cache.lazy=F
+# pt <- readRDS(file="rao_workingdata/pt.rds")
+
+ptgu <- readRDS("rao_workingdata/ptgu.rds")
+```
+
+```{r observedrankings}
+ranks <- ptgu %>%
+	group_by(cohort, oshpd_id) %>%
+	summarise(
+		cases = n(),
+		obs_30dreadmit = sum(isreadmit30dc)/n()
+		) %>%
+	filter(cases>4) %>%
+	mutate(obs_rank = min_rank(obs_30dreadmit)) %>%
+	arrange(desc(obs_rank))
+
+ranks <- ptgu %>% 
+	group_by(oshpd_id, safetydsh, safetynaph) %>%
+	select(oshpd_id, safetydsh, safetynaph) %>%
+	distinct() %>%
+	right_join(ranks)
+```
+
+```{r ranking}
+# 30d Readmissions for cystectomy by safety net status
+ranks %>% filter(cohort=="Cystectomy" & !is.na(safetynaph)) %>%
+ggplot(aes(x=reorder(oshpd_id, -obs_30dreadmit), y=100*obs_30dreadmit+.5, fill=safetynaph)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="30 Day Readmission Rate for Cystectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+# 30d Readmissions for Partial Nephrectomy by safety net status
+ranks %>% filter(cohort=="PartialNx" & !is.na(safetynaph)) %>%
+ggplot(aes(x=reorder(oshpd_id, -obs_30dreadmit), y=100*obs_30dreadmit+.5, fill=safetynaph)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="30 Day Readmission Rate for Partial Nephrectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+# 30d Readmissions for Radical Nephrectomy by safety net status
+ranks %>% filter(cohort=="RadNx" & !is.na(safetynaph)) %>%
+ggplot(aes(x=reorder(oshpd_id, -obs_30dreadmit), y=100*obs_30dreadmit+.5, fill=safetynaph)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="30 Day Readmission Rate for Radical Nephrectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+```
+
+```{r eval=F}
+u <- t %>%
+	left_join(shn) %>%
+	mutate(lowvol = ifelse(cases<5,T,F))
+
+u %>% 
+	group_by(cohort,safetynaph, lowvol) %>%
+	summarize(n())
+
+v <- u %>% 
+	
+
+
+
+table(u$safetydsh[u$cases<5])
+
+table(t$cohort,t$cases)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
