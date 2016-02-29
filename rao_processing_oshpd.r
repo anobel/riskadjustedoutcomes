@@ -533,6 +533,13 @@ pt <- pt %>%
     arrange(desc(cohortdeaths)) %>%
   right_join(pt)
 
+# Assign LOS quintiles and prolonged LOS
+pt <- pt %>%
+  group_by(cohort) %>%
+  mutate(losquint = ntile(los, 5)) %>%
+  mutate(losprolong = ifelse(losquint == 5, T, F))
+
+
 saveRDS(pt, file="rao_workingdata/pt.rds")
 
 # Once complete, run rao_processing_all.r to combine with other datasets
