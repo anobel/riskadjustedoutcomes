@@ -133,6 +133,7 @@ t1 <- ptgu %>%
     "Payer: County Indigent (%)" = sprintf("%.1f", 100*sum(pay_cat=="County Indigent")/n()),
     "Payer: Self Pay (%)" = sprintf("%.1f", 100*sum(pay_cat=="Self Pay")/n()),
     "Payer: Other Govt (%)" = sprintf("%.1f", 100*sum(pay_cat=="Other Govt")/n()),
+    "Approach (% Open)" = sprintf("%.1f", 100*sum(open)/n()),
     "Length of Stay" = prettyMedianIQR(los,1),
     "Dispo: Home (%)" = sprintf("%.1f", 100*sum(disp=="Home")/n()),
     "Dispo: Home Health (%)" = sprintf("%.1f", 100*sum(disp=="Home Health")/n()),
@@ -290,7 +291,10 @@ t2 <- ptgu %>%
     "Payer: County Indigent (%)" = sprintf("%.1f", 100*sum(pay_cat=="County Indigent")/n()),
     "Payer: Self Pay (%)" = sprintf("%.1f", 100*sum(pay_cat=="Self Pay")/n()),
     "Payer: Other Govt (%)" = sprintf("%.1f", 100*sum(pay_cat=="Other Govt")/n()),
+    "Approach (% Open)" = sprintf("%.1f", 100*sum(open)/n()),
     "Length of Stay" = prettyMedianIQR(los,1),
+    "LOS Top Quintile" = sprintf("%.1f", 100*sum(loslong5)/n()),
+    "LOS Top Decile" = sprintf("%.1f", 100*sum(loslong10)/n()),
     "Dispo: Home (%)" = sprintf("%.1f", 100*sum(disp=="Home")/n()),
     "Dispo: Home Health (%)" = sprintf("%.1f", 100*sum(disp=="Home Health")/n()),
     "Dispo: SNF (%)" = sprintf("%.1f", 100*sum(disp=="SNF")/n()),
@@ -335,7 +339,10 @@ t2p <- ptgu %>%
     "Academic Hospital (%)" = chisq.test(.$residency, .$isreadmit30dc)$p.value,
     "Urology Residency (%)" = chisq.test(.$residencygu, .$isreadmit30dc)$p.value,
     "Payer: Medicare (%)" = chisq.test(.$pay_cat, .$isreadmit30dc)$p.value,
+    "Approach (% Open)" = chisq.test(.$open, .$isreadmit30dc)$p.value,
     "Length of Stay" = t.test(los ~ isreadmit30adm, data=.)$p.value,
+    "LOS Top Quintile" = chisq.test(.$loslong5, .$isreadmit30dc)$p.value,
+    "LOS Top Decile" = chisq.test(.$loslong10, .$isreadmit30dc)$p.value,
     "Dispo: Home (%)" = chisq.test(.$disp, .$isreadmit30dc, simulate.p.value=T)$p.value
     ) %>% t() %>% as.data.frame()
 
