@@ -9,7 +9,7 @@ output:
         css: floating.css
         toc: yes
 params:
-    cohort: "PartialNx"
+    cohort: "RadNx"
 ---
 
 ```{r global_options, include=FALSE}
@@ -668,7 +668,7 @@ auc$me12$auc <- aucResult(me12)
 - SES: Education (% that completed HS)
 
 ```{r MEmodel13}
-me13 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + eduno, data=train, family="binomial")
+me13 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + eduhs, data=train, family="binomial")
 
 # print raw results of regression
 summary(me13)
@@ -814,20 +814,52 @@ auc$me23$formula <- as.character(me23$call)[2]
 auc$me23$auc <- aucResult(me23)
 ```
 
+## Volume, SES
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Hospital `r params$cohort` volume
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel23b}
+me23b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + volume, data=train, family="binomial")
+
+# print raw results of regression
+summary(me23b)
+rocResult(me23b)
+auc$me23b$formula <- as.character(me23b$call)[2]
+auc$me23b$auc <- aucResult(me23b)
+```
+
 ## Volume Quintile
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - Hospital: Hospital `r params$cohort` volume quintile
 - SES: None
 
-```{r MEmodel24}
-me24 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + volumequint, data=train, family="binomial")
+```{r MEmodel24a}
+me24a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + volumequint, data=train, family="binomial")
 
 # print raw results of regression
-summary(me24)
-rocResult(me24)
-auc$me24$formula <- as.character(me24$call)[2]
-auc$me24$auc <- aucResult(me24)
+summary(me24a)
+rocResult(me24a)
+auc$me24a$formula <- as.character(me24a$call)[2]
+auc$me24a$auc <- aucResult(me24a)
+```
+
+## Volume Quintile, SES
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Hospital `r params$cohort` volume quintile
+- SES: Diez-Roux, Ethnicity (White)
+
+```{r MEmodel24b}
+me24b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + volumequint, data=train, family="binomial")
+
+# print raw results of regression
+summary(me24b)
+rocResult(me24b)
+auc$me24b$formula <- as.character(me24b$call)[2]
+auc$me24b$auc <- aucResult(me24b)
 ```
 
 ## Hospital Beds
@@ -846,6 +878,22 @@ auc$me25$formula <- as.character(me25$call)[2]
 auc$me25$auc <- aucResult(me25)
 ```
 
+## Hospital Beds, SES
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Number of hospital beds
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel25b}
+me25b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + bedsMean, data=train, family="binomial")
+
+# print raw results of regression
+summary(me25b)
+rocResult(me25b)
+auc$me25b$formula <- as.character(me25b$call)[2]
+auc$me25b$auc <- aucResult(me25b)
+```
+
 ## Average Daily Census
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
@@ -862,30 +910,46 @@ auc$me26$formula <- as.character(me26$call)[2]
 auc$me26$auc <- aucResult(me26)
 ```
 
+## Average Daily Census, SES
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Average Daily Census
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel26b}
+me26b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + adcMean, data=train, family="binomial")
+
+# print raw results of regression
+summary(me26b)
+rocResult(me26b)
+auc$me26b$formula <- as.character(me26b$call)[2]
+auc$me26b$auc <- aucResult(me26b)
+```
+
 ## Medicare DSH
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - Hospital: Disproportionate Share Index
 - SES: None
 
-```{r MEmodel27}
-me27 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + dsh_pctMean, data=train, family="binomial")
+```{r MEmodel27a}
+me27a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + dsh_pctMean, data=train, family="binomial")
 
 # print raw results of regression
-summary(me27)
-rocResult(me27)
-auc$me27$formula <- as.character(me27$call)[2]
-auc$me27$auc <- aucResult(me27)
+summary(me27a)
+rocResult(me27a)
+auc$me27a$formula <- as.character(me27a$call)[2]
+auc$me27a$auc <- aucResult(me27a)
 ```
 
-## Safety Net DSH
+## Medicare DSH, SES
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
-- Hospital: Safety Net Hospital Status
-- SES: None
+- Hospital: Disproportionate Share Index
+- SES: HoodZscore, Ethnicity (white)
 
 ```{r MEmodel27b}
-me27b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + safetydsh, data=train, family="binomial")
+me27b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + dsh_pctMean, data=train, family="binomial")
 
 # print raw results of regression
 summary(me27b)
@@ -894,20 +958,68 @@ auc$me27b$formula <- as.character(me27b$call)[2]
 auc$me27b$auc <- aucResult(me27b)
 ```
 
+## Safety Net DSH
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Safety Net Hospital Status
+- SES: None
+
+```{r MEmodel28a}
+me28a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + safetydsh, data=train, family="binomial")
+
+# print raw results of regression
+summary(me28a)
+rocResult(me28a)
+auc$me28a$formula <- as.character(me28a$call)[2]
+auc$me28a$auc <- aucResult(me28a)
+```
+
+## Safety Net DSH, SES
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Safety Net Hospital Status
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel28b}
+me28b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + safetydsh, data=train, family="binomial")
+
+# print raw results of regression
+summary(me28b)
+rocResult(me28b)
+auc$me28b$formula <- as.character(me28b$call)[2]
+auc$me28b$auc <- aucResult(me28b)
+```
+
 ## Safety Net NAPH
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - Hospital: Safety Net Hospital Status (NAPH)
 - SES: None
 
-```{r MEmodel27c}
-me27c <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + safetynaph, data=train, family="binomial")
+```{r MEmodel29a}
+me29a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + safetynaph, data=train, family="binomial")
 
 # print raw results of regression
-summary(me27c)
-rocResult(me27c)
-auc$me27c$formula <- as.character(me27c$call)[2]
-auc$me27c$auc <- aucResult(me27c)
+summary(me29a)
+rocResult(me29a)
+auc$me29a$formula <- as.character(me29a$call)[2]
+auc$me29a$auc <- aucResult(me29a)
+```
+
+## Safety Net NAPH, SES
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Safety Net Hospital Status (NAPH)
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel29b}
+me29b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + safetynaph, data=train, family="binomial")
+
+# print raw results of regression
+summary(me29b)
+rocResult(me29b)
+auc$me29b$formula <- as.character(me29b$call)[2]
+auc$me29b$auc <- aucResult(me29b)
 ```
 
 ## Medicare %
@@ -916,14 +1028,30 @@ auc$me27c$auc <- aucResult(me27c)
 - Hospital: Meidcare %
 - SES: None
 
-```{r MEmodel28}
-me28 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + mcr_pctMean, data=train, family="binomial")
+```{r MEmodel30a}
+me30a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + mcr_pctMean, data=train, family="binomial")
 
 # print raw results of regression
-summary(me28)
-rocResult(me28)
-auc$me28$formula <- as.character(me28$call)[2]
-auc$me28$auc <- aucResult(me28)
+summary(me30a)
+rocResult(me30a)
+auc$me30a$formula <- as.character(me30a$call)[2]
+auc$me30a$auc <- aucResult(me30a)
+```
+
+## Medicare %, SES
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Meidcare %
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel30b}
+me30b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + mcr_pctMean, data=train, family="binomial")
+
+# print raw results of regression
+summary(me30b)
+rocResult(me30b)
+auc$me30b$formula <- as.character(me30b$call)[2]
+auc$me30b$auc <- aucResult(me30b)
 ```
 
 ## Case Mix
@@ -932,15 +1060,32 @@ auc$me28$auc <- aucResult(me28)
 - Hospital: Case Mix Index
 - SES: None
 
-```{r MEmodel29}
-me29 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + cmiMean, data=train, family="binomial")
+```{r MEmodel31a}
+me31a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + cmiMean, data=train, family="binomial")
 
 # print raw results of regression
-summary(me29)
-rocResult(me29)
+summary(me31a)
+rocResult(me31a)
 
-auc$me29$formula <- as.character(me29$call)[2]
-auc$me29$auc <- aucResult(me29)
+auc$me31a$formula <- as.character(me31a$call)[2]
+auc$me31a$auc <- aucResult(me31a)
+```
+
+## Case Mix, SES
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Case Mix Index
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel31b}
+me31b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + cmiMean, data=train, family="binomial")
+
+# print raw results of regression
+summary(me31b)
+rocResult(me31b)
+
+auc$me31b$formula <- as.character(me31b$call)[2]
+auc$me31b$auc <- aucResult(me31b)
 ```
 
 ## Hosp Comb
@@ -949,14 +1094,14 @@ auc$me29$auc <- aucResult(me29)
 - Hospital: Beds, DSH, Medicare Percentage, Case Mix Index
 - SES: None
 
-```{r MEmodel30}
-me30 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + bedsMean + dsh_pctMean + mcr_pctMean + cmiMean, data=train, family="binomial")
+```{r MEmodel32}
+me32 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + bedsMean + dsh_pctMean + mcr_pctMean + cmiMean, data=train, family="binomial")
 
 # print raw results of regression
-summary(me30)
-rocResult(me30)
-auc$me30$formula <- as.character(me30$call)[2]
-auc$me30$auc <- aucResult(me30)
+summary(me32)
+rocResult(me32)
+auc$me32$formula <- as.character(me32$call)[2]
+auc$me32$auc <- aucResult(me32)
 ```
 
 ## Mortality
@@ -965,16 +1110,31 @@ auc$me30$auc <- aucResult(me30)
 - Hospital: Cohort specific in-hospital mortality rate
 - SES: None
 
-```{r MEmodel31}
-me31 <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + cohortmortality, data=train, family="binomial")
+```{r MEmodel33a}
+me33a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + cohortmortality, data=train, family="binomial")
 
 # print raw results of regression
-summary(me31)
-rocResult(me31)
-auc$me31$formula <- as.character(me31$call)[2]
-auc$me31$auc <- aucResult(me31)
+summary(me33a)
+rocResult(me33a)
+auc$me33a$formula <- as.character(me33a$call)[2]
+auc$me33a$auc <- aucResult(me33a)
 ```
 
+## Mortality
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Cohort specific in-hospital mortality rate
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel33b}
+me33b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + cohortmortality, data=train, family="binomial")
+
+# print raw results of regression
+summary(me33b)
+rocResult(me33b)
+auc$me33b$formula <- as.character(me33b$call)[2]
+auc$me33b$auc <- aucResult(me33b)
+```
 
 ## Academic: Any
 - Outcome: 30 day readmission from date discharge date after index admission
@@ -992,14 +1152,14 @@ auc$me35a$formula <- as.character(me35a$call)[2]
 auc$me35a$auc <- aucResult(me35a)
 ```
 
-## Academic: GU
+## Academic: Any
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
-- Hospital: Urology Residency
-- SES: None
+- Hospital: residency
+- SES: Diez-Rouz, Ethnicity (white)
 
 ```{r MEmodel35b}
-me35b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + residencygu, data=train, family="binomial")
+me35b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + residency, data=train, family="binomial")
 
 # print raw results of regression
 summary(me35b)
@@ -1008,20 +1168,68 @@ auc$me35b$formula <- as.character(me35b$call)[2]
 auc$me35b$auc <- aucResult(me35b)
 ```
 
+## Academic: GU
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Urology Residency
+- SES: None
+
+```{r MEmodel36a}
+me36a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + residencygu, data=train, family="binomial")
+
+# print raw results of regression
+summary(me36a)
+rocResult(me36a)
+auc$me36a$formula <- as.character(me36a$call)[2]
+auc$me36a$auc <- aucResult(me36a)
+```
+
+## Academic: GU
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Urology Residency
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel36b}
+me36b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + residencygu, data=train, family="binomial")
+
+# print raw results of regression
+summary(me36b)
+rocResult(me36b)
+auc$me36b$formula <- as.character(me36b$call)[2]
+auc$me36b$auc <- aucResult(me36b)
+```
+
 ## Academic: Resident Number
 - Outcome: 30 day readmission from date discharge date after index admission
 - Predictors: age (10yrs), sex, Elixhauser Sum
 - Hospital: Number of FTE Residents
 - SES: None
 
-```{r MEmodel35c}
-me35c <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + residentnum, data=train, family="binomial")
+```{r MEmodel37a}
+me37a <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + residentnum, data=train, family="binomial")
 
 # print raw results of regression
-summary(me35c)
-rocResult(me35c)
-auc$me35c$formula <- as.character(me35c$call)[2]
-auc$me35c$auc <- aucResult(me35c)
+summary(me37a)
+rocResult(me37a)
+auc$me37a$formula <- as.character(me37a$call)[2]
+auc$me37a$auc <- aucResult(me37a)
+```
+
+## Academic: Resident Number
+- Outcome: 30 day readmission from date discharge date after index admission
+- Predictors: age (10yrs), sex, Elixhauser Sum
+- Hospital: Number of FTE Residents
+- SES: Diez-Roux, Ethnicity (white)
+
+```{r MEmodel37b}
+me37b <- glm(isreadmit30dc ~ agyradmcentered + sex + elixsum + hoodzscore + ethwhite + residentnum, data=train, family="binomial")
+
+# print raw results of regression
+summary(me37b)
+rocResult(me37b)
+auc$me37b$formula <- as.character(me37b$call)[2]
+auc$me37b$auc <- aucResult(me37b)
 ```
 
 # Rural, Distance
