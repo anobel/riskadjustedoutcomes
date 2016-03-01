@@ -126,7 +126,7 @@ dsh$ZIP.Code[vec] <- missing[match(dsh$providerid, missing$providerid),"ZIP.Code
 dsh$lon <- missing[match(dsh$providerid, missing$providerid),"lon"]
 dsh$lat <- missing[match(dsh$providerid, missing$providerid),"lat"]
 
-rm(missing, vec, hospinfo)
+rm(missing, missingcoords, vec, hospinfo)
 
 # extract the coordinates from the $location column
 dsh$latnew <- as.numeric(str_extract(dsh$Location, "[0-9]{2}\\.[0-9]+"))
@@ -138,7 +138,7 @@ dsh$lat[is.na(dsh$lat)] <- dsh$latnew[is.na(dsh$lat)]
 dsh <- select(dsh, -lonnew, -latnew)
 
 # there are 46 records with providerid and some data, but no names/addresses, all 2007-2008
-# likely facilities that no longer exist. will drop them
+# facilities that no longer exist. will drop them
 dsh<- dsh[!dsh$name=="",]
 
 titlecase <- c("name", "Hospital.Name", "Address", "City", "County.Name")
@@ -148,7 +148,6 @@ rm(titlecase)
 # Scale percentages to 100
 dsh$dsh_pct <- dsh$dsh_pct*100
 dsh$mcr_pct <- dsh$mcr_pct*100
-
 
 # Assign hospitals to quintiles
 dsh <- dsh %>%

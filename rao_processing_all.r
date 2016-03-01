@@ -58,6 +58,11 @@ pt <- pt %>%
   left_join(dshmeans)
 rm(dsh, dshmeans)
 
+# a subset of hospitals were not present in DSH data set, will mark them as NON-safety net hospitals
+# because we have a definitive positive list of Safety Net Hospitals
+pt$safetydsh[is.na(pt$safetydsh)] <- F
+pt$safetynaph[is.na(pt$safetynaph)] <- F
+
 # Import data on resident number, residency status
 residents <- readRDS("rao_workingdata/residents.rds")
 
