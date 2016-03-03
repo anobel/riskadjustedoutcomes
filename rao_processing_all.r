@@ -49,7 +49,7 @@ dshmeans <- dsh %>%
 
 dshmeans <- dsh %>%
   group_by(providerid) %>%
-  select(providerid, safetydsh, safetynaph) %>%
+  select(providerid, safetydsh, safetydsh4, safetydsh10, safetynaph) %>%
   distinct() %>%
   right_join(dshmeans)
 
@@ -61,6 +61,8 @@ rm(dsh, dshmeans)
 # a subset of hospitals were not present in DSH data set, will mark them as NON-safety net hospitals
 # because we have a definitive positive list of Safety Net Hospitals
 pt$safetydsh[is.na(pt$safetydsh)] <- F
+pt$safetydsh4[is.na(pt$safetydsh4)] <- F
+pt$safetydsh10[is.na(pt$safetydsh10)] <- F
 pt$safetynaph[is.na(pt$safetynaph)] <- F
 
 # Import data on resident number, residency status

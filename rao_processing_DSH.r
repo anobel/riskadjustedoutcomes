@@ -156,13 +156,17 @@ dsh <- dsh %>%
     dshMean = mean(dsh_pct, na.rm=T)
   ) %>%
   mutate(
-    dshquintile = ntile(dshMean, 5)
+    dshquartile = ntile(dshMean,4),
+    dshquintile = ntile(dshMean, 5),
+    dshdecile = ntile(dshMean, 10)
   ) %>%
   select(-dshMean) %>%
   right_join(dsh)
 
-# classify safety net hospitals as top quintile of DSH percentage
+# classify safety net hospitals as top quartile, quintile, decile of DSH percentage
+dsh$safetydsh4 <- ifelse(dsh$dshquartile==4, T, F)
 dsh$safetydsh <- ifelse(dsh$dshquintile==5, T, F)
+dsh$safetydsh10 <- ifelse(dsh$dshdecile==10, T, F)
 
 # Assign Safety Net status based on NAPH membership
 # assign all hospitals as "no", then tag specific hospitals as YES
