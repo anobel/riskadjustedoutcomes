@@ -63,7 +63,38 @@ resPairsTable <- function(x) {
   ptable[ptable==0] <- ""
   ptable[ptable==1] <- ""
   return(kable(ptable))
-  }
+}
+
+## Function to generate table of permutation testing p-values
+resPermsTable <- function(x) {
+  p <- lapply(x, pvalue)
+  matsize <- length(p)/2
+  p <- lapply(p, function(y) format.pval(y, eps = 0.001, digits=3))
+  ptable <- diag(matsize)
+  ptable[lower.tri(ptable, diag=F)] <- p
+  t(ptable)
+  ptable <- matrix(ptable, nrow=matsize, ncol=matsize, byrow=T)  
+  rownames(ptable) = grep("^r_", names(pred), value=T)
+  colnames(ptable) = grep("^r_", names(pred), value=T)
+  ptable[ptable==0] <- ""
+  ptable[ptable==1] <- ""
+  return(kable(ptable))
+}
+
+# function to calculate all possible combinations of ranks
+comboDiffs <- function(x) {
+          df <- lapply(seq_along(combinations), function (y) {
+                    pred <- pred[pred$cohort==x,colnames(pred) %in% unlist(combinations[y])]
+                    result <- unlist(pred[,1])-unlist(pred[,2])
+                    return(result)
+                    }) 
+          names(df) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+          df <- as.data.frame(df)
+          df$cohort <- x
+          return(df)
+}
+
+
 ```
 
 ```{r loaddata}
@@ -99,8 +130,8 @@ ptgu$index <- seq(1:nrow(ptgu))
 # Group by OSHPD_ID and cohort, then take a 75% sample for training set
 train <- ptgu %>%
   group_by(cohort, oshpd_id) %>%
-  
   sample_frac(size=0.75, replace=F)
+
 # anything that didnt make it into training set is put into a test set
 test <- ptgu[!(ptgu$index %in% train$index),]
 
@@ -119,7 +150,8 @@ ranks <- test %>%
 		p_obs = sum(isreadmit30dc)/n()
 		) %>%
 	# filter(cases>4) %>%
-	mutate(r_obs = rank(p_obs, ties.method="average"))
+	mutate(
+	  r_obs = rank(p_obs, ties.method="average"))
 
 ranks <- test %>% 
 	group_by(oshpd_id) %>%
@@ -189,21 +221,21 @@ rm(pred_cystectomy, pred_partialnx, pred_radnx)
 # extract names of columns for predicted probabilities
 vars <- grep("p_", names(pred_all), value=T)
 # replace the "p_" with "r_" to start the name, use it in the mutate_each_() function
-vars <- setNames(vars, str_replace(vars, "p_", "r_"))
+vars_r <- setNames(vars, str_replace(vars, "p_", "r_"))
 
 # calculate assign cohort/hospital specific predicted probabilities, then rank by cohort
 pred <- pred_all %>%
   group_by(cohort, oshpd_id) %>%
   summarise_each(funs(mean), starts_with("p_")) %>%
   group_by(cohort) %>%
-  mutate_each_(funs(rank(., ties.method="average")), vars) %>%
+  mutate_each_(funs(rank(., ties.method="average")), vars_r) %>%
   right_join(ranks)
 
 res_probs <- pred %>%
   select(-matches("dsh"), -cases, -oshpd_id) %>%
   group_by(cohort, safetynaph) %>%
   summarise_each(funs(mean(., na.rm=T)))%>%
-  mutate_each(funs(.*100), starts_with("p_")) %>%
+  mutate_each(funs(.*100), matches("p_|pct_")) %>%
   group_by(cohort, safetynaph) %>%
   mutate_each(funs(sprintf("%.2f", .)))%>% 
   t() %>% as.data.frame()
@@ -307,33 +339,50 @@ resPairsTable(res_pairs_radnx)
 # O-E Diff Tests
 Permutation Testing
 ```{r}
-# Calculate differences in relevant ranks
-  # mutate(
-  #   changerank_base_v_obs = r_base - r_obs,
-  #   changerank_base_ses_v_obs = r_base_ses - r_obs,
-  #   changerank_base_v_base_ses = r_base_ses - r_obs,
-  #   changerank_base_v_payer = r_payer - r_obs,
-  #   changerank_base_v_payer_ses = r_payer_ses - r_obs
-  # ) %>%
-  # summarise("Hospitals" = n()) %>%
-  summarise_each(funs(min, max))
+# generate all possible combinations of ranks
+combinations <- combn(grep("^r_", names(pred), value=T),2, simplify = F)
 
+perms <- lapply(unique(pred$cohort), comboDiffs)
+perms <- rbind_all(perms)
 
+perms <- cbind(perms, "safetynaph" = factor(ifelse(pred$safetynaph, "Yes", "No")))
 
+res_perm_cystectomy <- lapply(grep("^r_", colnames(perms)), function (x) {
+  independence_test(perms[perms$cohort=="Cystectomy",x] ~ safetynaph, data=perms[perms$cohort=="Cystectomy",], ytrafo=rank_trafo, distribution=exact())
+})
 
-perm <- pred %>% 
-    mutate(dsh = factor(ifelse(safetynaph, "Yes", "No")))%>%
-    mutate(
-      changerank_base_v_obs = r_base - r_obs,
-      changerank_base_ses_v_obs = r_base_ses - r_obs,
-      changerank_base_v_base_ses = r_base - r_base_ses) %>%
-    group_by(cohort) %>%
-    do(results = 
-      coin::independence_test(changerank_base_v_base_ses ~ dsh, data = ., ytrafo = rank_trafo, distribution = exact())
-    )
+res_perm_partialnx <- lapply(grep("^r_", colnames(perms)), function (x) {
+  independence_test(perms[perms$cohort=="PartialNx",x] ~ safetynaph, data=perms[perms$cohort=="PartialNx",], ytrafo=rank_trafo, distribution=exact())
+})
 
-# list just the p-values from the permutation testing
-lapply(perm$results, pvalue)
+res_perm_radnx <- lapply(grep("^r_", colnames(perms)), function (x) {
+  independence_test(perms[perms$cohort=="RadNx",x] ~ safetynaph, data=perms[perms$cohort=="RadNx",], ytrafo=rank_trafo, distribution=exact())
+})
+
+names(res_perm_cystectomy) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+
+names(res_perm_partialnx) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+
+names(res_perm_radnx) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+```
+
+# Permutation Testing
+## Cystectomy
+```{r}
+resPermsTable(res_perm_cystectomy)
+```
+
+## Partial Nephrectomy
+```{r}
+resPermsTable(res_perm_partialnx)
+```
+
+## Radical Nephrectomy
+```{r}
+resPermsTable(res_perm_radnx)
+```
+
+```{r eval=F}
 
 
 
