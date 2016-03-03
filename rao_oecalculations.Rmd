@@ -26,21 +26,22 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, ca
   
 ```{r packages, cache=F}
 # Data Cleaning Packages
-library(dplyr)
-library(stringr)
-library(tidyr)
+library(dplyr)      # Data Management
+library(tidyr)      # Data Cleaning
+library(stringr)    # String manipulation
 
 # Graphics Packages
-library(DT)
-library(ggplot2)
-library(ggthemes)
+library(ggplot2)    # Graphics
+library(ggthemes)   # Themes for ggplot
+library(DT)         # HTML Widget for Data Tables
+library(stargazer)  # HTML Tables for regression results
 library(knitr)
-library(RColorBrewer)
-library(stargazer)
+library(RColorBrewer)# Color palettes from Cynthia Brewer
 
 # Specialty/Stats Packages
-library(ROCR)
-library(lme4)
+library(ROCR)       # Performance measures, ROC curves, AUC
+library(lme4)       # Mixed Effects Models
+library(coin)       # Permutation Testing
 ```
 
 ```{r constants.functions, cache=F}
@@ -121,8 +122,8 @@ ranks <- test %>%
 	mutate(r_obs = rank(p_obs, ties.method="average"))
 
 ranks <- test %>% 
-	group_by(oshpd_id, safetydsh, safetynaph) %>%
-	select(oshpd_id, safetydsh, safetynaph) %>%
+	group_by(oshpd_id) %>%
+	select(oshpd_id, safetydsh, safetynaph, safetydsh4, safetydsh10) %>%
 	distinct() %>%
 	right_join(ranks)
 
@@ -180,7 +181,7 @@ pred_all <- rbind(pred_cystectomy, pred_partialnx, pred_radnx)
 rm(pred_cystectomy, pred_partialnx, pred_radnx)
 
 # extract names of columns for predicted probabilities
-vars <- grep("p_", names(pred), value=T)
+vars <- grep("p_", names(pred_all), value=T)
 # replace the "p_" with "r_" to start the name, use it in the mutate_each_() function
 vars <- setNames(vars, str_replace(vars, "p_", "r_"))
 
@@ -193,7 +194,7 @@ pred <- pred_all %>%
   right_join(ranks)
 
 res_probs <- pred %>%
-  group_by(cohort, safetydsh) %>%
+  group_by(cohort, safetynaph) %>%
   mutate(
     changerank_base_v_obs = r_base - r_obs,
     changerank_base_ses_v_obs = r_base_ses - r_obs,
@@ -291,19 +292,53 @@ names(res_pairs_partialnx) <- paste(matrix(unlist(combinations), ncol = 2, byrow
 names(res_pairs_radnx) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = " vs. ")
 ```
 
-### Cystectomy
+# Ranking Differences
+## Cystectomy
 ```{r}
 resPairsTable(res_pairs_cystectomy)
 ```
 
-### Partial Nephrectomy
+## Partial Nephrectomy
 ```{r}
 resPairsTable(res_pairs_partialnx)
 ```
 
-### Radical Nephrectomy
+## Radical Nephrectomy
 ```{r}
 resPairsTable(res_pairs_radnx)
+```
+
+# O-E Diff Tests
+Permutation Testing
+```{r}
+perm <- pred %>% 
+    mutate(dsh = factor(ifelse(safetynaph, "Yes", "No")))%>%
+    mutate(
+      changerank_base_v_obs = r_base - r_obs,
+      changerank_base_ses_v_obs = r_base_ses - r_obs,
+      changerank_base_v_base_ses = r_base - r_base_ses) %>%
+    group_by(cohort) %>%
+    do(results = 
+      coin::independence_test(changerank_base_v_base_ses ~ dsh, data = ., ytrafo = rank_trafo, distribution = exact())
+    )
+
+# list just the p-values from the permutation testing
+lapply(perm$results, pvalue)
+
+
+
+# t <- perm %>% filter(cohort=="Cystectomy")
+# 
+# independence_test(changerank_base_v_base_ses ~ dsh, data =t, ytrafo = rank_trafo, distribution = exact())
+# 
+# table(t$dsh)
+# table(t$safetydsh)
+# wilcoxsign_test(p_base~p_base_ses, data=t, distribution="exact")
+# 
+# wilcoxsign_test(p_obs~p_base_ses, data=t, distribution="exact")
+
+
+
 ```
 
 ```{r oe, eval=F}
@@ -312,10 +347,7 @@ oe <- pred %>%
   mutate(
     changerank_base_v_obs = r_base - r_obs,
     changerank_base_ses_v_obs = r_base_ses - r_obs,
-    changerank_base_v_base_ses = r_base - r_base_ses) %>%
-  summarise(
-    c1 = mean(changerank_base_v_obs)
-  )
+    changerank_base_v_base_ses = r_base - r_base_ses)
 
 oe
     summarise_each(funs(mean), starts_with("change"))
@@ -329,23 +361,6 @@ wilcox.test(t$p_obs, t$p_base, paired=T)
 wilcox.test(t$p_obs, t$p_base_ses, paired=T)
 wilcox.test(t$p_base, t$p_base_ses, paired=T)
 
-##################
-# Permutation Testing
-####################
-library(coin)
-t <- pred %>% filter(cohort=="Cystectomy")
-wilcoxsign_test(p_base~p_base_ses, data=t, distribution="exact")
-
-wilcoxsign_test(p_obs~p_base_ses, data=t, distribution="exact")
-
-independence_test(changerank_base_v_base_ses ~ dsh, data = oedf, ytrafo = rank_trafo, distribution = exact())
-
-oedf$dsh[oedf$safetydsh] <- "Yes"
-oedf$dsh[!oedf$safetydsh] <- "No"
-oedf$dsh <- factor(oedf$dsh)
-
-
-independence_test(time ~ group, data = rotarod, ytrafo = rank_trafo, distribution = exact())
 
 oe %>% filter(cohort=="Cystectomy") %>%
 ggplot(aes(x=reorder(oshpd_id, -changerank_base_v_base_ses), y=changerank_base_v_base_ses, fill=safetydsh)) +
