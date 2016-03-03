@@ -355,7 +355,7 @@ t2p <- as.data.frame(lapply(t2p, as.numeric))
 
 t2p <- as.data.frame(lapply(t2p, format.pval, eps=0.001, digits=2), stringsAsFactors=F)
 
-colnames(t2p) <- paste(t2pcols, "p-value", sep="_")
+colnames(t2p) <- paste0(t2pcols, " p-value")
 t2p$id <- t2prows
 
 t2$id <- row.names(t2)
