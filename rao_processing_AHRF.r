@@ -1,4 +1,3 @@
-
 # analyze survey data for free (http://asdfree.com) with the r language
 # area resource file
 
@@ -12,7 +11,7 @@
 
 # uncomment this line by removing the `#` at the front..
 
-setwd("/Users/anobel/Documents/Dropbox/Research/Risk Adjusted Outcomes/RAO_analysis/rao_originaldata/arf/arf12/")
+setwd("/Users/anobel/Documents/code/rao/rao_originaldata/arf/arf12/")
 # ..in order to set your current working directory
 
 ############################################
