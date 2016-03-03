@@ -132,6 +132,12 @@ ranks %>%
   summarise(
     "Number of Hospitals in Test Data" = n()
   ) %>% kable()
+
+ranks %>%
+  group_by("Cohort" = cohort, "Safety Net Status" = safetynaph) %>%
+  summarise(
+    "Number of Hospitals in Test Data" = n()
+  ) %>% kable()
 ```
 
 # Models
@@ -194,33 +200,23 @@ pred <- pred_all %>%
   right_join(ranks)
 
 res_probs <- pred %>%
+  select(-matches("dsh"), -cases, -oshpd_id) %>%
   group_by(cohort, safetynaph) %>%
-  mutate(
-    changerank_base_v_obs = r_base - r_obs,
-    changerank_base_ses_v_obs = r_base_ses - r_obs,
-    changerank_base_v_base_ses = r_base_ses - r_obs,
-    changerank_base_v_payer = r_payer - r_obs,
-    changerank_base_v_payer_ses = r_payer_ses - r_obs
-  ) %>%
-  summarise(
-    "Hospitals" = n(),
-    "Obs Readmission Rate" = sprintf("%.2f", 100*mean(p_obs, na.rm=T)),
-    "Obs Rank" = sprintf("%.1f", mean(r_obs, na.rm=T)),
-    "Pred Prob - Base" = sprintf("%.2f", 100*mean(p_base, na.rm=T)),
-    "Pred Rank - Base" = sprintf("%.1f", mean(r_base, na.rm=T)),
-    "Mean Rank Change - Base" = sprintf("%.2f", mean(changerank_base_v_obs, na.rm=T)),
-    "Pred Prob - Base SES" = sprintf("%.2f", 100*mean(p_base_ses, na.rm=T)),
-    "Pred Rank - Base SES" = sprintf("%.1f", mean(r_base_ses, na.rm=T)),
-    "Mean Rank Change - SES" = sprintf("%.2f", mean(changerank_base_ses_v_obs, na.rm=T))
-  ) %>% t() %>% as.data.frame()
+  summarise_each(funs(mean(., na.rm=T)))%>%
+  mutate_each(funs(.*100), starts_with("p_")) %>%
+  group_by(cohort, safetynaph) %>%
+  mutate_each(funs(sprintf("%.2f", .)))%>% 
+  t() %>% as.data.frame()
 
 res_names <- paste(unlist(res_probs[1,]), unlist(res_probs[2,]))
 res_names <- str_replace_all(res_names, "FALSE", "Not SHN")
 res_names <- str_replace_all(res_names, "TRUE", "SHN")
-
 colnames(res_probs) <- res_names
 res_probs <- res_probs[3:nrow(res_probs),]
 rm(res_names)
+
+# arrange by row names (all model probabilities first, then rankings)
+res_probs <- res_probs[order(row.names(res_probs)),]
 
 # This assigns results of wilcoxon rank sum tests to the table, but it is manual
 # onerous once the nubmer of comparisons increases
@@ -311,6 +307,20 @@ resPairsTable(res_pairs_radnx)
 # O-E Diff Tests
 Permutation Testing
 ```{r}
+# Calculate differences in relevant ranks
+  # mutate(
+  #   changerank_base_v_obs = r_base - r_obs,
+  #   changerank_base_ses_v_obs = r_base_ses - r_obs,
+  #   changerank_base_v_base_ses = r_base_ses - r_obs,
+  #   changerank_base_v_payer = r_payer - r_obs,
+  #   changerank_base_v_payer_ses = r_payer_ses - r_obs
+  # ) %>%
+  # summarise("Hospitals" = n()) %>%
+  summarise_each(funs(min, max))
+
+
+
+
 perm <- pred %>% 
     mutate(dsh = factor(ifelse(safetynaph, "Yes", "No")))%>%
     mutate(
