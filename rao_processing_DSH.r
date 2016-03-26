@@ -3,6 +3,7 @@ library(ggmap)
 library(dplyr)
 
 # Import Medicare DSH data into separate dataframes
+# https://www.cms.gov/medicare/medicare-fee-for-service-payment/acuteinpatientpps/dsh.html
 # did this as individual calls because the column names/numbers are different, so cant do regular rbind
 # Import DSH data into a list of dataframes
 dsh <- apply(data.frame(paste("rao_originaldata/medicare_dsh/",list.files("rao_originaldata/medicare_dsh/"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)

@@ -481,14 +481,11 @@ results <- train %>%
   do(
     "p_base" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum, data=., family="binomial"),
     "p_base_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + hoodzscore + ethwhite, data=., family="binomial"),
-    "p_base_sesplus" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + hoodzscore + ethwhite + ru + km, data=., family="binomial"),
+    "p_base_sesru" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + hoodzscore + ethwhite + ru + km, data=., family="binomial"),
     "p_hospfactors" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency, data=., family="binomial"),
-      "p_hospfactors_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + hoodzscore + ethwhite, data=., family="binomial"),
-    "p_stayfactors" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + loslong5 + pay_cat + disp, data=., family="binomial"),
-    "p_stayfactors_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + loslong5 + pay_cat + disp + hoodzscore + ethwhite, data=., family="binomial"),
-    "p_allfactors" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + loslong5 + pay_cat + disp, data=., family="binomial"),
-    "p_allfactors_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + loslong5 + pay_cat + disp + hoodzscore + ethwhite, data=., family="binomial")
-  )
+    "p_hospfactors_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + hoodzscore + ethwhite, data=., family="binomial"),
+    "p_hospfactors_sesru" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + hoodzscore + ethwhite + ru + km, data=., family="binomial")
+    )
 
 # Assign number of cohorts and number of models (for later use)
 numcohorts <- length(unique(test$cohort))
