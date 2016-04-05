@@ -94,7 +94,9 @@ auc <- list()
 # when loading the full data set, in chunk options set cache.lazy=F
 # pt <- readRDS(file="rao_workingdata/pt.rds")
 
-ptgu <- readRDS("rao_workingdata/ptgu.rds")
+ptgu <- readRDS("rao_workingdata/ptgu.rds") %>%
+    filter(!is.na(patzcta))
+
 ```
 
 # Table 1
@@ -105,6 +107,7 @@ t1 <- ptgu %>%
     "Cases" = prettyNum(n(), big.mark=","),
     "Hospitals" = prettyNum(n_distinct(oshpd_id), big.mark=","),
     "Age (Median, IQR)" = prettyMedianIQR(agyradm,0),
+    "Approach - Open (%)" = sprintf("%.1f", 100*sum(open, na.rm=T)/n()),
     "In-Hospital Mortality (%)" = sprintf("%.1f", mean(cohortmortality, na.rm=T)),
     "30d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit30dc)/n()),
     "90d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit90dc)/n()),
@@ -123,8 +126,7 @@ t1 <- ptgu %>%
     "Rural (Patient) (%)" = sprintf("%.1f", 100*sum(ru=="Rural", na.rm=T)/n()),
     "Distance to Hospital (km)" = prettyMedianIQR(km,1),
     "Hospital Volume" = prettyMedianIQR(volume/5,1),
-    "Safety Net - DSH (%)" = sprintf("%.1f", 100*sum(safetydsh, na.rm=T)/n()),
-    "Safety Net - NAPH (%)" = sprintf("%.1f", 100*sum(safetynaph, na.rm=T)/n()),
+    "Safety Net - DSH (%)" = sprintf("%.1f", 100*sum(safetydsh4, na.rm=T)/n()),
     "Academic Hospital (%)" = sprintf("%.1f", 100*sum(residency, na.rm=T)/n()),
     "Urology Residency (%)" = sprintf("%.1f", 100*sum(residencygu, na.rm=T)/n()),
     "Payer: Medicare (%)" = sprintf("%.1f", 100*sum(pay_cat=="Medicare")/n()),
@@ -147,6 +149,10 @@ colnames(t1) <- t1[1,]
 t1 <- t1[-1,]
 
 t1p <- data.frame("Pvalue"=matrix(nrow=nrow(t1), ncol=1), row.names=rownames(t1))
+
+t1p["Approach - Open (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$open)$p.value,
+  eps=.001, digits=3)
 
 t1p["In-Hospital Mortality (%)",1] <- format.pval(
   summary(aov(cohortmortality ~ cohort, data=ptgu))[[1]][1,5],
@@ -225,11 +231,7 @@ t1p["Hospital Volume",1] <- format.pval(
   eps=.001, digits=3)
 
 t1p["Safety Net - DSH (%)",1] <- format.pval(
-  chisq.test(ptgu$cohort, ptgu$safetydsh)$p.value,
-  eps=.001, digits=3)
-
-t1p["Safety Net - NAPH (%)",1] <- format.pval(
-  chisq.test(ptgu$cohort, ptgu$safetynaph)$p.value,
+  chisq.test(ptgu$cohort, ptgu$safetydsh4)$p.value,
   eps=.001, digits=3)
 
 t1p["Academic Hospital (%)",1] <- format.pval(
@@ -266,6 +268,7 @@ t2 <- ptgu %>%
   dplyr::summarise(
     "Cases" = prettyNum(n(), big.mark=","),
     "Age (Median, IQR)" = prettyMedianIQR(agyradm,0),
+    "Approach - Open (%)" = sprintf("%.1f", 100*sum(safetydsh, na.rm=T)/n()),
     "Elixhauser Sum" = prettyMeanSD(elixsum,1),
     "Diez-Roux Score" = prettyMedianIQR(hoodzscore,2),
     "Median Household Income ($1k)" = prettyMedianIQR(medianincome1k,1),
@@ -281,8 +284,7 @@ t2 <- ptgu %>%
     "Rural (Patient) (%)" = sprintf("%.1f", 100*sum(ru=="Rural", na.rm=T)/n()),
     "Distance to Hospital (km)" = prettyMedianIQR(km,1),
     "Hospital Volume" = prettyMedianIQR(volume/5,1),
-    "Safety Net - DSH (%)" = sprintf("%.1f", 100*sum(safetydsh, na.rm=T)/n()),
-    "Safety Net - NAPH (%)" = sprintf("%.1f", 100*sum(safetynaph, na.rm=T)/n()),
+    "Safety Net - DSH (%)" = sprintf("%.1f", 100*sum(safetydsh4, na.rm=T)/n()),
     "Academic Hospital (%)" = sprintf("%.1f", 100*sum(residency, na.rm=T)/n()),
     "Urology Residency (%)" = sprintf("%.1f", 100*sum(residencygu, na.rm=T)/n()),
     "Payer: Medicare (%)" = sprintf("%.1f", 100*sum(pay_cat=="Medicare")/n()),
@@ -319,6 +321,7 @@ t2p <- ptgu %>%
   group_by(cohort) %>%
   do(
     "Age (Median, IQR)" = t.test(agyradm ~ isreadmit30dc, data=.)$p.value,
+    "Approach - Open (%)" = chisq.test(.$open, .$isreadmit30dc)$p.value,
     "Elixhauser Sum" = t.test(elixsum ~ isreadmit30dc, data=.)$p.value,
     "Diez-Roux Score" = t.test(hoodzscore ~ isreadmit30dc, data=.)$p.value,
     "Median Household Income ($1K)" = t.test(medianincome1k ~ isreadmit30dc, data=.)$p.value,
@@ -334,8 +337,7 @@ t2p <- ptgu %>%
     "Rural (Patient) (%)" = chisq.test(.$ru, .$isreadmit30dc)$p.value,
     "Distance to Hospital (km)" = t.test(km ~ isreadmit30dc, data=.)$p.value,
     "Hospital Volume" = t.test(volume ~ isreadmit30adm, data=.)$p.value,
-    "Safety Net - DSH (%)" = chisq.test(.$safetydsh, .$isreadmit30dc)$p.value,
-    "Safety Net - NAPH (%)" = chisq.test(.$safetynaph, .$isreadmit30dc)$p.value,
+    "Safety Net - DSH (%)" = chisq.test(.$safetydsh4, .$isreadmit30dc)$p.value,
     "Academic Hospital (%)" = chisq.test(.$residency, .$isreadmit30dc)$p.value,
     "Urology Residency (%)" = chisq.test(.$residencygu, .$isreadmit30dc)$p.value,
     "Payer: Medicare (%)" = chisq.test(.$pay_cat, .$isreadmit30dc)$p.value,
