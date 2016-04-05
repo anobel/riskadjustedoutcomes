@@ -114,7 +114,9 @@ rm(toscale)
 
 # make a disease specific cohort based on the parameter selected
 # params <- list(); params$cohort="Cystectomy"
-ptgucohort <- ptgu %>% filter(cohort==params$cohort)
+ptgucohort <- ptgu %>% 
+  filter(!is.na(patzcta)) %>%
+  filter(cohort==params$cohort)
 
 # split data into training and validation cohorts
 # Set random seed to reproduce results
