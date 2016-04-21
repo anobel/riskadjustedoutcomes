@@ -107,6 +107,7 @@ t1 <- ptgu %>%
     "Cases" = prettyNum(n(), big.mark=","),
     "Hospitals" = prettyNum(n_distinct(oshpd_id), big.mark=","),
     "Age (Median, IQR)" = prettyMedianIQR(agyradm,0),
+    "Sex (% Male)" = sprintf("%.1f", 100*sum(sex=="Male")/n()),
     "Approach - Open (%)" = sprintf("%.1f", 100*sum(open, na.rm=T)/n()),
     "In-Hospital Mortality (%)" = sprintf("%.1f", mean(cohortmortality, na.rm=T)),
     "30d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit30dc)/n()),
@@ -268,6 +269,7 @@ t2 <- ptgu %>%
   dplyr::summarise(
     "Cases" = prettyNum(n(), big.mark=","),
     "Age (Median, IQR)" = prettyMedianIQR(agyradm,0),
+    "Sex (% Male)" = sprintf("%.1f", 100*sum(sex=="Male")/n()),
     "Approach - Open (%)" = sprintf("%.1f", 100*sum(safetydsh, na.rm=T)/n()),
     "Elixhauser Sum" = prettyMeanSD(elixsum,1),
     "Diez-Roux Score" = prettyMedianIQR(hoodzscore,2),
@@ -321,6 +323,7 @@ t2p <- ptgu %>%
   group_by(cohort) %>%
   do(
     "Age (Median, IQR)" = t.test(agyradm ~ isreadmit30dc, data=.)$p.value,
+    "Sex (% Male)" = chisq.test(.$sex, .$isreadmit30dc)$p.value,
     "Approach - Open (%)" = chisq.test(.$open, .$isreadmit30dc)$p.value,
     "Elixhauser Sum" = t.test(elixsum ~ isreadmit30dc, data=.)$p.value,
     "Diez-Roux Score" = t.test(hoodzscore ~ isreadmit30dc, data=.)$p.value,

@@ -99,10 +99,12 @@ comboDiffs <- function(x) {
 ```{r loaddata}
 # Import data, keep only Cystectomy, Partial Nephrectomy, and Radical Nephrectomy cohorts
 # exclude hospitals with only 1 observation
+# drop patients with missing zip codes
 ptgu <- readRDS("rao_workingdata/ptgu.rds") %>%
   filter(cohort %in% c("Cystectomy", "PartialNx", "RadNx")) %>%
   group_by(cohort, oshpd_id) %>%
-  filter(n()>1)
+  filter(n()>1) %>%
+  filter(!is.na(patzcta))
 
 # List variables that will be scaled for models
 toscale <- c("agyradmcentered", "agyradm",
@@ -165,7 +167,7 @@ ranks %>%
   ) %>% kable()
 
 ranks %>%
-  group_by("Cohort" = cohort, "Safety Net Status" = safetynaph) %>%
+  group_by("Cohort" = cohort, "Safety Net Status" = safetydsh4) %>%
   summarise(
     "Number of Hospitals in Test Data" = n()
   ) %>% kable()
@@ -267,10 +269,10 @@ pred <- pred_all %>%
 
 res_probs <- pred %>%
   select(-matches("dsh"), -cases, -oshpd_id) %>%
-  group_by(cohort, safetynaph) %>%
+  group_by(cohort, safetydsh4) %>%
   summarise_each(funs(mean(., na.rm=T)))%>%
   mutate_each(funs(.*100), matches("p_|pct_")) %>%
-  group_by(cohort, safetynaph) %>%
+  group_by(cohort, safetydsh4) %>%
   mutate_each(funs(sprintf("%.2f", .)))%>% 
   t() %>% as.data.frame()
 
@@ -353,18 +355,18 @@ combinations <- combn(grep("^r_", names(pred), value=T),2, simplify = F)
 perms <- lapply(unique(pred$cohort), comboDiffs)
 perms <- rbind_all(perms)
 
-perms <- cbind(perms, "safetynaph" = factor(ifelse(pred$safetynaph, "Yes", "No")))
+perms <- cbind(perms, "safetydsh4" = factor(ifelse(pred$safetydsh4, "Yes", "No")))
 
 res_perm_cystectomy <- lapply(grep("^r_", colnames(perms)), function (x) {
-  independence_test(perms[perms$cohort=="Cystectomy",x] ~ safetynaph, data=perms[perms$cohort=="Cystectomy",], ytrafo=rank_trafo, distribution=exact())
+  independence_test(perms[perms$cohort=="Cystectomy",x] ~ safetydsh4, data=perms[perms$cohort=="Cystectomy",], ytrafo=rank_trafo, distribution=exact())
 })
 
 res_perm_partialnx <- lapply(grep("^r_", colnames(perms)), function (x) {
-  independence_test(perms[perms$cohort=="PartialNx",x] ~ safetynaph, data=perms[perms$cohort=="PartialNx",], ytrafo=rank_trafo, distribution=exact())
+  independence_test(perms[perms$cohort=="PartialNx",x] ~ safetydsh4, data=perms[perms$cohort=="PartialNx",], ytrafo=rank_trafo, distribution=exact())
 })
 
 res_perm_radnx <- lapply(grep("^r_", colnames(perms)), function (x) {
-  independence_test(perms[perms$cohort=="RadNx",x] ~ safetynaph, data=perms[perms$cohort=="RadNx",], ytrafo=rank_trafo, distribution=exact())
+  independence_test(perms[perms$cohort=="RadNx",x] ~ safetydsh4, data=perms[perms$cohort=="RadNx",], ytrafo=rank_trafo, distribution=exact())
 })
 
 names(res_perm_cystectomy) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
@@ -470,8 +472,10 @@ oe %>%
 
 - Base Model: Age, Sex, Elixhauser Sum
 - Base with SES: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
-- Payer: Age, Sex, Elixhauser Sum, Payer
-- Payer with SES: Age, Sex, Elixhauser Sum, Payer, Diez-Roux Score, Ethnicity
+- Base with SES + RU: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
+- Base with Hospital Factors: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
+- Base with Hospital Factors + SES: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
+- Base with Hospital Factors + SES + Rural: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
 
 P-values represent two sided Wilcoxon Rank Sum tests comparing rankings of predicted probabilites at the hospital level in non-SES models to models incoporating SES.
 
@@ -537,10 +541,10 @@ pred <- pred_all %>%
 
 res_probs <- pred %>%
   select(-matches("dsh"), -cases, -oshpd_id) %>%
-  group_by(cohort, safetynaph) %>%
+  group_by(cohort, safetydsh4) %>%
   summarise_each(funs(mean(., na.rm=T)))%>%
   mutate_each(funs(.*100), matches("p_|pct_")) %>%
-  group_by(cohort, safetynaph) %>%
+  group_by(cohort, safetydsh4) %>%
   mutate_each(funs(sprintf("%.2f", .)))%>% 
   t() %>% as.data.frame()
 
@@ -622,18 +626,18 @@ combinations <- combn(grep("^r_", names(pred), value=T),2, simplify = F)
 perms <- lapply(unique(pred$cohort), comboDiffs)
 perms <- rbind_all(perms)
 
-perms <- cbind(perms, "safetynaph" = factor(ifelse(pred$safetynaph, "Yes", "No")))
+perms <- cbind(perms, "safetydsh4" = factor(ifelse(pred$safetydsh4, "Yes", "No")))
 
 res_perm_cystectomy <- lapply(grep("^r_", colnames(perms)), function (x) {
-  independence_test(perms[perms$cohort=="Cystectomy",x] ~ safetynaph, data=perms[perms$cohort=="Cystectomy",], ytrafo=rank_trafo, distribution=exact())
+  independence_test(perms[perms$cohort=="Cystectomy",x] ~ safetydsh4, data=perms[perms$cohort=="Cystectomy",], ytrafo=rank_trafo, distribution=exact())
 })
 
 res_perm_partialnx <- lapply(grep("^r_", colnames(perms)), function (x) {
-  independence_test(perms[perms$cohort=="PartialNx",x] ~ safetynaph, data=perms[perms$cohort=="PartialNx",], ytrafo=rank_trafo, distribution=exact())
+  independence_test(perms[perms$cohort=="PartialNx",x] ~ safetydsh4, data=perms[perms$cohort=="PartialNx",], ytrafo=rank_trafo, distribution=exact())
 })
 
 res_perm_radnx <- lapply(grep("^r_", colnames(perms)), function (x) {
-  independence_test(perms[perms$cohort=="RadNx",x] ~ safetynaph, data=perms[perms$cohort=="RadNx",], ytrafo=rank_trafo, distribution=exact())
+  independence_test(perms[perms$cohort=="RadNx",x] ~ safetydsh4, data=perms[perms$cohort=="RadNx",], ytrafo=rank_trafo, distribution=exact())
 })
 
 names(res_perm_cystectomy) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
@@ -661,8 +665,8 @@ resPermsTable(res_perm_radnx, nummodels)
 
 ```{r rankingfigs, eval=F}
 # 30d Readmissions for cystectomy by safety net status
-pred %>% filter(cohort=="Cystectomy" & !is.na(safetynaph)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetynaph)) +
+pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
+ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
   labs(title="Observed 30 Day Readmission Rate for Cystectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
@@ -670,20 +674,28 @@ ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetynaph)) +
   theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
   theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
 
-
-pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_base), y=100*p_base+.5, fill=safetydsh)) +
+pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
+ggplot(aes(x=reorder(oshpd_id, -p_base), y=100*p_base+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
-  labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (base)", x=NULL, y="30 Day Readmission Rate (%)") +
+  labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base Model)", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
   theme_few() + 
   theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
   theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
 
-pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_base_ses), y=100*p_base_ses+.5, fill=safetydsh)) +
+pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
+ggplot(aes(x=reorder(oshpd_id, -p_base_ses), y=100*p_base_ses+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
-  labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (base+SES)", x=NULL, y="30 Day Readmission Rate (%)") +
+  labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base + SES)", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
+ggplot(aes(x=reorder(oshpd_id, -p_base_sesru), y=100*p_base_sesru+.5, fill=safetydsh4)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base + SES + Rural)", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
   theme_few() + 
   theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
@@ -713,22 +725,8 @@ ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh)) +
 ```{r eval=F}
 ranks %>%
   filter(cohort=="Cystectomy") %>%
-  filter(safetynaph==T) %>%
+  filter(safetydsh==T) %>%
   select(oshpd_id, r_obs, r_base, r_base_ses) %>%
   arrange(desc(r_base_ses)) %>%
   write.csv("temp.csv")
-
- 
-
 ```
-
-
-
-
-
-
-
-
-
-
-
