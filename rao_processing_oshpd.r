@@ -13,7 +13,7 @@ library(lubridate)
 library(ggplot2)
 
 # Specialty Packages
-library(icd9)
+library(icd)
 
 ##################
 #### Functions
