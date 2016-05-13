@@ -9,14 +9,14 @@ library(RCurl)
 # ZIP/ZCTA obtained from: https://ruralhealth.und.edu/ruca
 
 # Using Local Data
-# ru <- read.csv("rao_originaldata/RUCA/final310.csv", header=T, stringsAsFactors = T)
+# ru <- read.csv("data/raw/ruca/final310.csv", header=T, stringsAsFactors = T)
 
 # Using remote data directly
 ru <- getURL("https://ruralhealth.und.edu/ruca/final310.csv")
 ru <- read.csv(textConnection(ru))
 
 # load zipcode/ZCTA file
-zcta <- readRDS("rao_workingdata/zcta.rds")
+zcta <- read.csv("data/tidy/zcta.csv")
 
 # select the zip code and RUCA30 columns only
 ru <- ru %>%
@@ -32,7 +32,7 @@ ru <- merge(zcta, ru, all.x=T, all.y=F)
 rm(zcta)
 
 # drop all duplicated ZCTAs (merged on ZIP, and multiple ZIPs can make up a ZCTA)
-ru <- ru %>% 
+ru <- ru %>%
   select(-zip) %>%
   distinct(zcta)
 
@@ -72,9 +72,23 @@ ru <- ru %>%
 # ru$ru[ru$ruca %in% ruralsmall] <- "Small Rural"
 
 
-# D
-urban <- c(1.0, 1.1, 2.0, 2.1, 4.1, 5.1, 7.1, 8.1, 10.1)
-rural <- c(3.0, 4.0, 4.2, 5.0, 5.2, 6.0, 6.1, 7.0, 7.2, 7.3, 7.4, 8.0, 8.2, 8.3, 8.4, 9.0, 9.1, 9.2, 10.0, 10.2, 10.3, 10.4, 10.5, 10.6)
+# Categorization D
+urban <- c(1.0, 1.1,
+			2.0, 2.1,
+			4.1,
+			5.1,
+			7.1,
+			8.1,
+			10.1)
+rural <- c(3.0,
+			4.0, 4.2,
+			5.0, 5.2,
+			6.0, 6.1,
+		  	7.0, 7.2, 7.3, 7.4,
+		  	8.0, 8.2, 8.3, 8.4,
+		  	9.0, 9.1, 9.2,
+		  	10.0, 10.2, 10.3, 10.4, 10.5, 10.6)
+
 ru$ru[ru$ruca %in% urban] <- "Urban"
 ru$ru[ru$ruca %in% rural] <- "Rural"
 
@@ -87,5 +101,5 @@ ru$ruca <- NULL
 # clean environment
 rm(rural, urban)
 
-# save as RDS
-saveRDS(ru, file="rao_workingdata/rural.rds")
+# save data
+write.csv(ru, file="data/tidy/rural.csv")

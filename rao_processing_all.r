@@ -7,7 +7,7 @@ library(sp)
 # dsh <- readRDS("rao_workingdata/dsh.rds")
 # zcta <- read.csv("data/tidy/zcta.csv")
 # acs <- read.csv("data/tidy/acs.csv")
-# ru <- readRDS("rao_workingdata/rural.rds")
+# ru <- read.csv("data/tidy/rural.csv")
 # resident <- readRDS("rao_workingdata/residents.rds")
 # load("rao_workingdata/md.rda")
 
