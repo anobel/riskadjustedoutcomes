@@ -13,7 +13,6 @@
 *.rdb
 *cache/*
 *.md
-*.csv
 *.zip
 rao_workingdata/*
 rao_originaldata/*
