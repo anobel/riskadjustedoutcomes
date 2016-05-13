@@ -12,12 +12,13 @@ params:
     cohort: ""
 ---
 
+  
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=F)
 ```
 
 <!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
-<style>
+  <style>
   td {
     padding-left: 3px;
     padding-right: 3px;
@@ -83,15 +84,15 @@ resPermsTable <- function(x, nummodels) {
 
 # function to calculate all possible combinations of ranks
 comboDiffs <- function(x) {
-          df <- lapply(seq_along(combinations), function (y) {
-                    pred <- pred[pred$cohort==x,colnames(pred) %in% unlist(combinations[y])]
-                    result <- unlist(pred[,1])-unlist(pred[,2])
-                    return(result)
-                    }) 
-          names(df) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
-          df <- as.data.frame(df)
-          df$cohort <- x
-          return(df)
+  df <- lapply(seq_along(combinations), function (y) {
+    pred <- pred[pred$cohort==x,colnames(pred) %in% unlist(combinations[y])]
+    result <- unlist(pred[,1])-unlist(pred[,2])
+    return(result)
+  }) 
+  names(df) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+  df <- as.data.frame(df)
+  df$cohort <- x
+  return(df)
 }
 
 ```
@@ -145,20 +146,20 @@ test <- test %>% select(-index)
 ```{r observedrankings}
 # Calculate observed hospital level readmission rates and rankings, per cohort
 ranks <- test %>%
-	group_by(cohort, oshpd_id) %>%
-	summarise(
-		cases = n(),
-		p_obs = sum(isreadmit30dc)/n()
-		) %>%
-	# filter(cases>4) %>%
-	mutate(
-	  r_obs = rank(p_obs, ties.method="average"))
+  group_by(cohort, oshpd_id) %>%
+  summarise(
+    cases = n(),
+    p_obs = sum(isreadmit30dc)/n()
+  ) %>%
+  # filter(cases>4) %>%
+  mutate(
+    r_obs = rank(p_obs, ties.method="average"))
 
 ranks <- test %>% 
-	group_by(oshpd_id) %>%
-	select(oshpd_id, safetydsh, safetynaph, safetydsh4, safetydsh10) %>%
-	distinct() %>%
-	right_join(ranks)
+  group_by(oshpd_id) %>%
+  select(oshpd_id, safetydsh, safetynaph, safetydsh4, safetydsh10) %>%
+  distinct() %>%
+  right_join(ranks)
 
 ranks %>%
   group_by("Cohort" = cohort) %>%
@@ -194,7 +195,7 @@ results <- train %>%
     "p_hospfactors" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency, data=., family="binomial"),
     "p_hospfactors_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + hoodzscore + ethwhite, data=., family="binomial"),
     "p_hospfactors_sesru" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + hoodzscore + ethwhite + ru + km, data=., family="binomial")
-    )
+  )
 
 # Assign number of cohorts and number of models (for later use)
 numcohorts <- length(unique(test$cohort))
@@ -245,7 +246,7 @@ pred <- pred_all %>%
   right_join(ranks)
 
 res_probs <- pred %>%
-  select(-safetynaph, -safetydsh, safetydsh10, -cases, -oshpd_id) %>%
+  select(-safetynaph, -safetydsh, -safetydsh10, -cases, -oshpd_id) %>%
   group_by(cohort, safetydsh4) %>%
   summarise_each(funs(mean(., na.rm=T)))%>%
   mutate_each(funs(.*100), matches("p_|pct_")) %>%
@@ -278,22 +279,22 @@ pred <- pred %>%
 combinations <- combn(grep("p_", names(pred), value=T),2, simplify = F)
 
 res_pairs_cystectomy <- lapply(seq_along(combinations), function (x) {
-                  pred <- pred[pred$cohort=="Cystectomy",colnames(pred) %in% unlist(combinations[x])]
-                  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
-                  return(result)
-                  })
+  pred <- pred[pred$cohort=="Cystectomy",colnames(pred) %in% unlist(combinations[x])]
+  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
+  return(result)
+})
 
 res_pairs_partialnx <- lapply(seq_along(combinations), function (x) {
-                  pred <- pred[pred$cohort=="PartialNx",colnames(pred) %in% unlist(combinations[x])]
-                  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
-                  return(result)
-                  })
+  pred <- pred[pred$cohort=="PartialNx",colnames(pred) %in% unlist(combinations[x])]
+  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
+  return(result)
+})
 
 res_pairs_radnx <- lapply(seq_along(combinations), function (x) {
-                  pred <- pred[pred$cohort=="RadNx",colnames(pred) %in% unlist(combinations[x])]
-                  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
-                  return(result)
-                  })
+  pred <- pred[pred$cohort=="RadNx",colnames(pred) %in% unlist(combinations[x])]
+  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
+  return(result)
+})
 
 # Rename list for legibility    
 names(res_pairs_cystectomy) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = " vs. ")
@@ -371,7 +372,7 @@ resPermsTable(res_perm_radnx, nummodels)
 ```{r rankingfigs, eval=F}
 # 30d Readmissions for cystectomy by safety net status
 pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh4)) +
+  ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
   labs(title="Observed 30 Day Readmission Rate for Cystectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
@@ -380,7 +381,7 @@ ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh4)) +
   theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
 
 pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_base), y=100*p_base+.5, fill=safetydsh4)) +
+  ggplot(aes(x=reorder(oshpd_id, -p_base), y=100*p_base+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
   labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base Model)", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
@@ -389,7 +390,7 @@ ggplot(aes(x=reorder(oshpd_id, -p_base), y=100*p_base+.5, fill=safetydsh4)) +
   theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
 
 pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_base_ses), y=100*p_base_ses+.5, fill=safetydsh4)) +
+  ggplot(aes(x=reorder(oshpd_id, -p_base_ses), y=100*p_base_ses+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
   labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base + SES)", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
@@ -398,7 +399,7 @@ ggplot(aes(x=reorder(oshpd_id, -p_base_ses), y=100*p_base_ses+.5, fill=safetydsh
   theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
 
 pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_base_sesru), y=100*p_base_sesru+.5, fill=safetydsh4)) +
+  ggplot(aes(x=reorder(oshpd_id, -p_base_sesru), y=100*p_base_sesru+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
   labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base + SES + Rural)", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
@@ -407,8 +408,8 @@ ggplot(aes(x=reorder(oshpd_id, -p_base_sesru), y=100*p_base_sesru+.5, fill=safet
   theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
 
 # 30d Readmissions for Partial Nephrectomy by safety net status
-pred %>% filter(cohort=="PartialNx" & !is.na(safetydsh)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh)) +
+pred %>% filter(cohort=="PartialNx" & !is.na(safetydsh4)) %>%
+  ggplot(aes(x=reorder(oshpd_id, -p_base), y=100*p_base+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
   labs(title="30 Day Readmission Rate for Partial Nephrectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
@@ -417,8 +418,8 @@ ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh)) +
   theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
 
 # 30d Readmissions for Radical Nephrectomy by safety net status
-pred %>% filter(cohort=="RadNx" & !is.na(safetydsh)) %>%
-ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh)) +
+pred %>% filter(cohort=="RadNx" & !is.na(safetydsh4)) %>%
+  ggplot(aes(x=reorder(oshpd_id, -p_base_ses), y=100*p_base_ses+.5, fill=safetydsh4)) +
   geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
   labs(title="30 Day Readmission Rate for Radical Nephrectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
   scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +

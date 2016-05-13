@@ -326,7 +326,7 @@ elix <- cbind(visitId = pt$visitId, elix)
 # Convert from wide to long format, identify and drop all diagnoses that were not present on admission
 # Then add principal diagnosis and calculate Elixhauser before merging with main data
 
-# Convert wide to long and rename columns
+# Convert wide to long and rename, factor columns
 elix <- gather(elix, visitId, value, na.rm=T)
 colnames(elix) <- c("visitId", "var", "value")
 elix$value <- factor(elix$value)
