@@ -17,8 +17,8 @@ main2 <- "#92c5de"
 acc2 <- "#0571b0"
 
 # load data to add to map
-load("rao_workingdata/acs.rda")
-load("rao_workingdata/rural.rda")
+acs <- read.csv("data/tidy/acs.csv")
+ru <- read.csv("data/tidy/rural.csv")
 
 # import 2010 TIGER/Line ZCTA map for CA only
 map <- readOGR("rao_originaldata/shp/zcta_2010_simple/zcta2010simple.shp", layer="zcta2010simple")
