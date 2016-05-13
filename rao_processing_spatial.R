@@ -1,4 +1,4 @@
-library(reshape2)
+# Load libraries
 library(stringr)
 library(dplyr)
 library(sp)
@@ -7,9 +7,10 @@ library(ggplot2)
 library(ggthemes)
 library(ggmap)
 library(rgdal)
-library(jsonlite)
+library(htmlwidgets)
 library(leaflet)
 
+# define colors
 bg <- "#FCFCFA"
 main1 <- "#ca0020"
 acc1 <- "#f4a582"
@@ -20,9 +21,12 @@ acc2 <- "#0571b0"
 acs <- read.csv("data/tidy/acs.csv")
 ru <- read.csv("data/tidy/rural.csv")
 
-# import 2010 TIGER/Line ZCTA map for CA only
-map <- readOGR("rao_originaldata/shp/zcta_2010_simple/zcta2010simple.shp", layer="zcta2010simple")
-mapsimpler <- readOGR("rao_originaldata/shp/zcta_2010_simpler/zcta2010simpler.shp", layer="zcta2010simpler")
+# Import 2010 TIGER/Line ZCTA map for CA only
+# Original data available at
+# https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2010&layergroup=ZIP+Code+Tabulation+Areas
+# Shapefile simplified using QGIS
+map <- readOGR("data/raw/shp/zcta_2010_simple/zcta2010simple.shp", layer = "zcta2010simple")
+mapsimpler <- readOGR("data/raw/shp/zcta_2010_simpler/zcta2010simpler.shp", layer = "zcta2010simpler")
 
 # drop ZCTA in TIGER/Line map that do not exist in my data (only 6 that were not within CA)
 map <- map[map@data$ZCTA5CE10 %in% ru$zcta,]
@@ -32,22 +36,30 @@ map@data <- droplevels(map@data)
 mapsimpler@data <- droplevels(mapsimpler@data)
 
 # merge RUCA codes and acs data into spatial object
-map <- sp::merge(map, ru, by.x="ZCTA5CE10", by.y="zcta")
-map <- sp::merge(map, acs, by.x="ZCTA5CE10", by.y="zcta")
+map <- sp::merge(map, ru,
+                 by.x = "ZCTA5CE10",
+                 by.y = "zcta")
+map <- sp::merge(map, acs,
+                 by.x = "ZCTA5CE10",
+                 by.y = "zcta")
 
-mapsimpler <- sp::merge(mapsimpler, ru, by.x="ZCTA5CE10", by.y="zcta")
-mapsimpler <- sp::merge(mapsimpler, acs, by.x="ZCTA5CE10", by.y="zcta")
+mapsimpler <- sp::merge(mapsimpler, ru,
+                        by.x = "ZCTA5CE10", by.y = "zcta")
+mapsimpler <- sp::merge(mapsimpler, acs,
+                        by.x = "ZCTA5CE10", by.y = "zcta")
 
 #########################################################################################
 # Map of Zip Code Borders
+maps <- list()
 maps$borderzip <- leaflet(mapsimpler) %>%
   addTiles('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png') %>%
   # Data Layers
   addPolygons(group="Borders", stroke=T, smoothFactor=.1, weight=0.9, color="grey", opacity=0.7, fillOpacity=0)
 
-setwd("/Users/anobel/Documents/Dropbox/Research/Risk Adjusted Outcomes/RAO_analysis/RAOPresentation/externalfigs")
+# Export Map
+setwd("~/Documents/code/rao/exports")
 saveWidget(maps$borderzip, file="diag_borderzipmap.html", selfcontained = FALSE, libdir="dependencies")
-setwd("/Users/anobel/Documents/Dropbox/Research/Risk Adjusted Outcomes/RAO_analysis")
+setwd("~/Documents/code/rao")
 
 #########################################################################################
 # SES Factor map
@@ -112,66 +124,9 @@ maps$overall <- leaflet(mapsimpler) %>%
   hideGroup(c("Population", "Income", "Income < $25k", "Income > $100k", "Capital Income", "Median House Value", "Education: No HS", "Education: HS Only", "Education: College Degree", "Employment: Execs", "Gini", "ICE Income", "ICE Education", "ICE Ethnicity"))
 
 # SAVE the widget for later use
-setwd("/Users/anobel/Documents/Dropbox/Research/Risk Adjusted Outcomes/RAO_analysis/RAOPresentation/externalfigs")
+setwd("~/Documents/code/rao/exports")
 saveWidget(maps$overall, file="diag_overallmap.html", selfcontained = FALSE, libdir="dependencies")
-setwd("/Users/anobel/Documents/Dropbox/Research/Risk Adjusted Outcomes/RAO_analysis")
-
-#########################################################################################
-# map density map of physician density
-load("rao_workingdata/md.rda")
-
-# keep only data for 2011
-npi11 <- npi %>%
-  filter(year==2011)
-
-basemapca <- get_map(location=c(lon=-120, lat=38), maptype="terrain", color="bw", source="google", zoom=6)
-
-maps$allmds <- ggmap(basemapca) + 
-  stat_density2d(aes(x = lon, y = lat,  fill = ..level.., alpha = ..level..), size = 0.1, bins = 200, geom = 'polygon', data=npi11) + 
-  scale_fill_gradient(low = "green", high = "red") +
-  scale_alpha(range=c(.1, .5), guide = FALSE) +
-  theme_few() +
-  theme(axis.line=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank(),axis.ticks=element_blank(),
-        axis.title.x=element_blank(), axis.title.y=element_blank()) + 
-  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank())
-
-densitymap <- left_join(acs, md) %>%
-  select(zcta, pop, starts_with("mean"))
-
-# any zip codes that have no physicians in a category come up as NA, make these structural 0
-densitymap[is.na(densitymap)] <- 0
-
-# Calculate MD Density for all categories (Urologist, PMD, other)
-densitymap$gudens <- densitymap$meangu/densitymap$pop*100000
-densitymap$pmddens <- densitymap$meanpmd/densitymap$pop*100000
-densitymap$othermddens <- densitymap$meanothermd/densitymap$pop*100000
-densitymap$totalmddens <- densitymap$meantotal/densitymap$pop*100000
-
-densitymap[is.na(densitymap)] <- 0
-
-mapdensity <- sp::merge(map, densitymap, by.x="ZCTA5CE10", by.y="zcta")
-
-qpal.totalmddensity <- colorQuantile("Blues", mapdensity@data$totalmddens[mapdensity@data$totalmddens>0], n=5, na.color = "white")
-qpal.gudensity <- colorQuantile("Blues", mapdensity@data$gudens[mapdensity@data$gudens>0], n=5, na.color = "white")
-qpal.pmddensity <- colorQuantile("Blues", mapdensity@data$pmddens[mapdensity@data$pmddens>0], n=5, na.color = "white")
-qpal.othermddensity <- colorQuantile("Blues", mapdensity@data$othermddens[mapdensity@data$othermddens>0], n=5, na.color = "white")
-
-maps$density <- leaflet(mapsimpler) %>%
-  addTiles('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png') %>%
-  # Data Layers
-  addPolygons(group="Borders", stroke=T, smoothFactor=.1, weight=0.1, color="grey", opacity=0.7, fillOpacity=0) %>%
-  addPolygons(group="Total MD Density", fillOpacity = 0.7, fillColor=qpal.totalmddensity(mapdensity@data$totalmddens), smoothFactor = .1, stroke=T, weight=.1, color="grey", opacity=0.7) %>%
-  addPolygons(group="Urologist Density", fillOpacity = 0.7, fillColor=qpal.gudensity(mapdensity@data$gudens), smoothFactor = .1, stroke=T, weight=.1, color="grey", opacity=0.7) %>%
-  addPolygons(group="PMD Density", fillOpacity = 0.7, fillColor=qpal.pmddensity(mapdensity@data$pmddens), smoothFactor = .1, stroke=T, weight=.1, color="grey", opacity=0.7) %>%
-  addPolygons(group="Other MD Density", fillOpacity = 0.7, fillColor=qpal.othermddensity(mapdensity@data$othermddens), smoothFactor = .1, stroke=T, weight=.1, color="grey", opacity=0.7) %>%
-  # Layers Control
-  addLayersControl(baseGroups=c("Total MD Density", "Urologist Density", "PMD Density", "Other MD Density"), options = layersControlOptions(collapsed=FALSE)) %>%
-  hideGroup(c("Total MD Density", "Urologist Density", "PMD Density", "Other MD Density"))
-
-# SAVE the widget for later use
-setwd("/Users/anobel/Documents/Dropbox/Research/Risk Adjusted Outcomes/RAO_analysis/RAOPresentation/externalfigs")
-saveWidget(maps$density, file="diag_mddensitymap.html", selfcontained = FALSE, libdir="dependencies")
-setwd("/Users/anobel/Documents/Dropbox/Research/Risk Adjusted Outcomes/RAO_analysis/RAOPresentation")
+setwd("~/Documents/code/rao")
 
 
 #########################################################################################
