@@ -36,10 +36,9 @@ library(dplyr)
 
 ```{r load}
 load("rao_workingdata/dsh.rda")
-load("rao_workingdata/zcta.rda")
-load("rao_workingdata/acs.rda")
-load("rao_workingdata/rural.rda")
-load("rao_workingdata/spatial.rda")
+zcta <- read.csv("data/tidy/zcta.csv")
+acs <- read.csv("data/tidy/acs.csv")
+ru <- read.csv("data/tidy/rural.csv")
 
 bg <- "#FCFCFA"
 main1 <- "#ca0020"

@@ -9,7 +9,6 @@ library(sp)
 # acs <- read.csv("data/tidy/acs.csv")
 # ru <- read.csv("data/tidy/rural.csv")
 # resident <- readRDS("rao_workingdata/residents.rds")
-# load("rao_workingdata/md.rda")
 
 # oshpdxwalk <- readRDS("rao_workingdata/oshpdxwalk.rds")
 # pt <- readRDS("rao_workingdata/pt.rds")
@@ -132,7 +131,7 @@ rm(crowkm, ptzips)
 # import driving distances as calculated using ggmap and google map API
 # Currently, have only calculated driving distances/times for GU cohort, but will merge here so that
 # in the future, when entire cohort is complete, no changes need to be made here
-distances <- readRDS(file="rao_workingdata/distances.rds")
+distances <- read.csv(file="data/tidy/distances.csv")
 
 # merge with distances DF using pat/hosp zcta as keys
 pt <- pt %>%
