@@ -5,12 +5,12 @@ library(sp)
 
 # load previously saved data 
 # dsh <- readRDS("rao_workingdata/dsh.rds")
-# zcta <- readRDS("rao_workingdata/zcta.rds")
-# acs <- readRDS("rao_workingdata/acs.rds")
+# zcta <- read.csv("data/tidy/zcta.csv")
+# acs <- read.csv("data/tidy/acs.csv")
 # ru <- readRDS("rao_workingdata/rural.rds")
 # resident <- readRDS("rao_workingdata/residents.rds")
 # load("rao_workingdata/md.rda")
-# load("rao_workingdata/arf12.rda")
+
 # oshpdxwalk <- readRDS("rao_workingdata/oshpdxwalk.rds")
 # pt <- readRDS("rao_workingdata/pt.rds")
 # pt <- readRDS("rao_workingdata/ptlite.rds")

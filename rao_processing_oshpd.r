@@ -193,7 +193,7 @@ rm(arf12, arf12cols, county)
 # pt$hplzip[pt$oshpd_id==370759] <- 91950
 
 # Convert all ZIP codes to ZCTAs
-zcta <- readRDS("rao_workingdata/zcta.rds")
+zcta <- read.csv("data/tidy/zcta.csv")
 
 ##################
 # Hospital ZIP to ZCTA
