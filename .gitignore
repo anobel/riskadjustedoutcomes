@@ -9,11 +9,9 @@
 *.png
 *.html
 *.js
-*.xlsx
 *.rdb
 *cache/*
 *.md
-*.zip
 rao_workingdata/*
 rao_originaldata/*
 RAOPresentation/*
