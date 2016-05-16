@@ -128,25 +128,25 @@ ptzips <- ptzips %>%
 pt <- pt %>%
   left_join(ptzips)
 
-rm(crowkm, ptzips)     
+rm(crowkm, ptzips)
 
 # import driving distances as calculated using ggmap and google map API
 # Currently, have only calculated driving distances/times for GU cohort, but will merge here so that
 # in the future, when entire cohort is complete, no changes need to be made here
-distances <- read.csv(file="data/tidy/distances.csv")
+distances <- read.csv("data/tidy/distances.csv")
 
 # merge with distances DF using pat/hosp zcta as keys
 pt <- pt %>%
   left_join(distances)
 rm(distances)
 # Save as an RDS so its easier to reload into different named objects
-saveRDS(pt, file="data/patient/tidy/ptcombined.rds")
+saveRDS(pt, file = "data/patient/tidy/ptcombined.rds")
 
 #### Subsetting
 # Make smaller subset of all patients and also GU specific cohort
 ptgu <- pt[!is.na(pt$cohort),]
 # Drop those with multiple GU surgeries
-ptgu <- ptgu[ptgu$cohort!="Multiple GU Sx",]
+ptgu <- ptgu[ptgu$cohort != "Multiple GU Sx",]
 
 # drop procedure, diagnosis fields
 ptgu <- ptgu %>% select(
@@ -158,23 +158,23 @@ ptgu <- ptgu %>% select(
 
 # Consolidate Payer Categories
 # not sure what to do with "Other Govt" just yet...
-ptgu$pay_cat[ptgu$pay_cat=="Invalid"] <- "Other Payer"
-ptgu$pay_cat[ptgu$pay_cat=="Workers Comp"] <- "Other Payer"
-ptgu$pay_cat[ptgu$pay_cat=="Other Indigent"] <- "County Indigent"
+ptgu$pay_cat[ptgu$pay_cat == "Invalid"] <- "Other Payer"
+ptgu$pay_cat[ptgu$pay_cat == "Workers Comp"] <- "Other Payer"
+ptgu$pay_cat[ptgu$pay_cat == "Other Indigent"] <- "County Indigent"
 
 # Disposition
 # remove those ineligible for consideration (AMA, Incarcerated, Dead)
 ptgu <- ptgu %>% filter(!disp %in% c("Incarcerated", "Died"))
 
 # Consolidate disposition
-ptgu$disp[ptgu$disp=="SNF-Other Facility"] <- "SNF"
+ptgu$disp[ptgu$disp == "SNF-Other Facility"] <- "SNF"
 # only 1 case transferred to Acute Care at same facility? seems coding error, will combine with other
-ptgu$disp[ptgu$disp=="Acute Care"] <- "Other"
+ptgu$disp[ptgu$disp == "Acute Care"] <- "Other"
 
 # This is a heterogenous group, but small numbers. May look into more detail later.
-ptgu$disp[ptgu$disp=="Other Care Level"] <- "Other"
-ptgu$disp[ptgu$disp=="Acute-Other Facility"] <- "Other"
-ptgu$disp[ptgu$disp=="Other Care Level-Other Facility"] <- "Other"
+ptgu$disp[ptgu$disp == "Other Care Level"] <- "Other"
+ptgu$disp[ptgu$disp == "Acute-Other Facility"] <- "Other"
+ptgu$disp[ptgu$disp == "Other Care Level-Other Facility"] <- "Other"
 
 # drop levels
 ptgu <- droplevels(ptgu)

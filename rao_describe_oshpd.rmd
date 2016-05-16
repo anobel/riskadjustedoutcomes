@@ -95,7 +95,7 @@ auc <- list()
 # Load full dataset (12.5m obs)
 # when loading the full data set, in chunk options set cache.lazy=F
 # pt <- readRDS(file="rao_workingdata/pt.rds")
-ptgu <- readRDS("rao_workingdata/ptgu.rds")
+ptgu <- readRDS("data/patient/tidy/ptgu.rds")
 
 # List variables that will be scaled for models
 toscale <- c("agyradmcentered", 

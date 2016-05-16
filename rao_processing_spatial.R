@@ -131,7 +131,7 @@ setwd("~/Documents/code/rao")
 
 #########################################################################################
 ## Hospital Cluster Map
-load("rao_workingdata/dsh.rda")
+read.csv("data/tidy/dsh.csv")
 dsh2011 <- filter(dsh, year=="2011")
 
 popup <- data.frame(
@@ -152,4 +152,4 @@ saveWidget(maps$hospitalcluster, file="diag_hospitalclustermap.html", selfcontai
 setwd("/Users/anobel/Documents/Dropbox/Research/Risk Adjusted Outcomes/RAO_analysis")
 
 ##############################
-save(map, maps, file="rao_workingdata/spatial.rda")
+save(map, maps, file="data/tidy/spatial.rda")

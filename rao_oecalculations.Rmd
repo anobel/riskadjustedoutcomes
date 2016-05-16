@@ -101,7 +101,7 @@ comboDiffs <- function(x) {
 # Import data, keep only Cystectomy, Partial Nephrectomy, and Radical Nephrectomy cohorts
 # exclude hospitals with only 1 observation
 # drop patients with missing zip codes
-ptgu <- readRDS("rao_workingdata/ptgu.rds") %>%
+ptgu <- readRDS("data/patient/tidy/ptgu.rds") %>%
   filter(cohort %in% c("Cystectomy", "PartialNx", "RadNx")) %>%
   group_by(cohort, oshpd_id) %>%
   filter(n()>1) %>%

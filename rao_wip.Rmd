@@ -35,7 +35,7 @@ library(dplyr)
 ```
 
 ```{r load}
-load("rao_workingdata/dsh.rda")
+dsh <- read.csv("data/tidy/dsh.csv")
 zcta <- read.csv("data/tidy/zcta.csv")
 acs <- read.csv("data/tidy/acs.csv")
 ru <- read.csv("data/tidy/rural.csv")
@@ -364,4 +364,3 @@ ggplot(acsz, aes(x=hoodzscore)) +
   theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg), legend.title=element_blank()) + 
   labs(y="ZCTAs", x="Diez-Roux Neighborhood Z-Score")
 ```
-

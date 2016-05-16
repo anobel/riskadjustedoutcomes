@@ -94,7 +94,7 @@ auc <- list()
 # when loading the full data set, in chunk options set cache.lazy=F
 # pt <- readRDS(file="rao_workingdata/pt.rds")
 
-ptgu <- readRDS("rao_workingdata/ptgu.rds") %>%
+ptgu <- readRDS("data/patient/tidy/ptgu.rds") %>%
     filter(!is.na(patzcta))
 
 ```
