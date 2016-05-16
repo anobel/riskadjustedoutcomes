@@ -4,22 +4,24 @@ library(dplyr)
 library(sp)
 
 # load previously saved data 
-# dsh <- readRDS("rao_workingdata/dsh.rds")
+# dsh <- read.csv("data/tidy/dsh.csv")
 # zcta <- read.csv("data/tidy/zcta.csv")
+# zctalatlon <- read.csv("data/tidy/zctalatlon.csv")
 # acs <- read.csv("data/tidy/acs.csv")
 # ru <- read.csv("data/tidy/rural.csv")
-# resident <- readRDS("rao_workingdata/residents.rds")
+# resident <- read.csv("data/tidy/residents.csv")
 
 # oshpdxwalk <- read.csv("data/tidy/oshpdxwalk.csv")
-# pt <- readRDS("rao_workingdata/pt.rds")
-# pt <- readRDS("rao_workingdata/ptlite.rds")
-# ptgu <- readRDS("rao_workingdata/ptgu.rds")
+
+# pt <- readRDS("data/patient/tidy/pt.rds")
+# pt <- readRDS("data/patient/tidy/ptlite.rds")
+# ptgu <- readRDS("data/patient/tidy/ptgu.rds")
 
 # Merging Datasets
 
 # Add Medicare ID to main patient file using OSHPD crosswalk
 # Load overall patient data and OSHPD crosswalk
-pt <- readRDS("rao_workingdata/pt.rds")
+pt <- readRDS("data/patient/tidy/pt.rds")
 oshpdxwalk <- read.csv("data/tidy/oshpdxwalk.csv")
 
 # merge PT data and crosswalk using common column oshpd_id
@@ -32,7 +34,7 @@ rm(oshpdxwalk)
 
 # Combine with Medicare DSH data
 # Load Medicare DSH Data
-dsh <- readRDS("rao_workingdata/dsh.rds")
+dsh <- read.csv("data/tidy/dsh.csv")
 
 # DSH dataframe has values per hospital per year
 # will average each hospital's values over the data time period (5 years)
@@ -65,7 +67,7 @@ pt$safetydsh10[is.na(pt$safetydsh10)] <- F
 pt$safetynaph[is.na(pt$safetynaph)] <- F
 
 # Import data on resident number, residency status
-residents <- readRDS("rao_workingdata/residents.rds")
+resident <- read.csv("data/tidy/residents.csv")
 
 pt <- pt %>%
   left_join(residents)
@@ -73,7 +75,7 @@ rm(residents)
 
 # Merge ACS SES data and Diez Roux Neighborhood score
 # Import
-acs <- readRDS(file="rao_workingdata/acs.rds")
+acs <- read.csv("data/tidy/acs.csv")
 
 # Merge pt data with ACS data
 pt <- pt %>%
@@ -81,7 +83,7 @@ pt <- pt %>%
 rm(acs)
 
 # Merge Rural/Urban Classifications
-ru <- readRDS("rao_workingdata/rural.rds")
+ru <- read.csv("data/tidy/rural.csv")
 
 pt <- pt %>%
   left_join(ru, by=c("patzcta" = "zcta"))
@@ -89,12 +91,12 @@ rm(ru)
 
 # Merge ZCTA Lat/Lon data, for both patient and hospital ZCTA
 # Import same data set, zctalatlon twice, once to use for patient zip, once for hospital zip
-ptlatlon <- readRDS("rao_workingdata/zctalatlon.rds")
+zctalatlon <- read.csv("data/tidy/zctalatlon.csv")
 colnames(ptlatlon) <- c("patzcta", "ptlon", "ptlat")
 pt <- pt %>% 
   left_join(ptlatlon)
 
-hosplatlon <- readRDS("rao_workingdata/zctalatlon.rds")
+zctalatlon <- read.csv("data/tidy/zctalatlon.csv")
 colnames(hosplatlon) <- c("hospzcta", "hosplon", "hosplat")
 pt <- pt %>%
   left_join(hosplatlon)
@@ -138,7 +140,7 @@ pt <- pt %>%
   left_join(distances)
 rm(distances)
 # Save as an RDS so its easier to reload into different named objects
-saveRDS(pt, file="rao_workingdata/ptcombined.rds")
+saveRDS(pt, file="data/patient/tidy/ptcombined.rds")
 
 #### Subsetting
 # Make smaller subset of all patients and also GU specific cohort
@@ -177,8 +179,8 @@ ptgu$disp[ptgu$disp=="Other Care Level-Other Facility"] <- "Other"
 # drop levels
 ptgu <- droplevels(ptgu)
 
-saveRDS(ptgu, file="rao_workingdata/ptgu.rds")
+saveRDS(ptgu, file="data/patient/tidy/ptgu.rds")
 # Make a subsample of 100k and save as a smaller dataset
 # ptlite <- pt %>% ungroup() %>% sample_n(100000, replace=F) %>% droplevels()
-# saveRDS(ptlite, file="rao_workingdata/ptlite.rds")
+# saveRDS(ptlite, file="data/patient/tidy/ptlite.rds")
 # rm(ptlite)

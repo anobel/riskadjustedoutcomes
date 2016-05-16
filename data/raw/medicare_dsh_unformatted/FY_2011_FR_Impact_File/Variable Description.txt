@@ -1,0 +1,90 @@
+"DATA SOURCES FOR THIS FY 2011 FINAL RULE IMPACT FILE: MARCH 2010 UPDATE OF FY 2009 MEDPAR, MARCH 2010 UPDATE OF PROVIDER SPECIFIC FILE, FY2008/FY2007 COST REPORT DATA"								
+								
+								
+WAGE INDEX DATA has a 100% Occ Mix adjustment based on FY 2007/2008 survey data								
+								
+Provider Number	6 digit Medicare provider number; the first 2 digits are the state code.							
+Name	"Name of Medicare provider from OSCAR.(""blank"" = unknown)"							
+Geographic Labor Market Area	The Geographic CBSA location based on OMB's Core Based Statistical Area (CBSA) designations.  The CBSA assignment is based on where the provider is physically located based on SSA state and county code information.  Rural areas are designated by 2-digit SSA state codes.							
+Pre Reclass Labor Market Area  	Pre-reclassification CBSA							
+Payment Labor Market Area (for purposes of Capital and DSH)	Payment CBSA ( urban vs rural) for purposes of determining capital & DSH payments							
+SSA COUNTY CODE	SSA state county code. First two digits represent the state code and the last 4 digits represent the county code. SSA system is used to Identify the county in which provider is geographically located and this field be used in conjunction with the msa/cbsa crosswalk file.							
+REGION	1=NEW ENGLAND; 2=MIDDLE ATLANTIC; 3=SOUTH ATLANTIC; 4=EAST NORTH CENTRAL; 5=EAST SOUTH CENTRAL; 6=WEST NORTH CENTRAL; 7=WEST SOUTH CENTRAL; 8-=MOUNTAIN; 9=PACIFIC; 40=PUERTO RICO							
+URGEO	"Large urban, Other Urban or Rural designation of the providers geographic CBSA"							
+URSPA	Urban or Rural designation based on payment CBSA							
+RECLASS	Reclass Status FY 2011:  N -provider did not reclassify; W -provider reclassified for wage index ; L provider reclassified under 1886(d)(8)(B) of the SSA; S-provider redesignated as rural under Sec. 401 of BIPA. 							
+POST RECLASS Labor Market Area	 Post Reclassification CBSA for FY 2011							
+FY 2011 Wage Index	"FY 2011 final wage index after applying the MGCRB reclassifications, rual floor, adjustements for the Frontier wage index provision and the P.L. 108-173 Sec 505 adjustments where applicable for FY 2011. Wage Index reflects the application of national rural floor budget neutrality required under the Affordable Care Act ."							
+FY 2011 Puerto Rico Specific  wage index	FY 2011 Final Puerto Rico Specific wage index after applying the MGCRB reclassifications and the P.L. 108-173 Sec 505 adjustments where applicable for FY 2011							
+LUGAR	Provider is located in a Lugar County as defined in 1886(d)(8)(B) of the Act							
+Section 401 hospital	A 'SEC401' denotes urban providers redesignated as rural under CFR 412.103 - Sec 401 of BIPA							
+Section 505 eligible	A 'YES' denotes providers eligible  to receive a wage index adjustment under  Sec. 505  of  P.L. 108-173 for  FY 2011							
+Section 505 wage adjustment	Wage adjustment for providers who are eligible to receive a wage index adjustment under  Sec. 505  of P.L. 108-173 for FY 2011. 							
+Cost of Living Adjustment	Cost of Living Adjustment factor obtained from the U.S. Office of Personnel Management  for IPPS providers located in Alaska or Hawaii for IPPS operating payments							
+Resident to Bed Ratio	Resident to Bed Ratio. Used to determine IME factor for operating PPS payments							
+RDAY	Resident to Average Daily Census (ADC) ratio. Used to calculate the IME adjustment for Capital PPS							
+BEDS	The number of total beds obtained from cost report data.**							
+Average Daily Census	Calculated as the ratio of Total Acute Inpatient Days to Total Days in the Cost Reporting Period obtained from cost report data.**							
+TCHOP	IME adjustment factor for Operating PPS							
+TCHCP	IME adjustment factor for Captial PPS							
+DSHPCT	Disproportionate Share Hospital Patient percent as determined from cost report data & SSA data							
+DSHOPG	Operating Disproportionate Share Hospital (DSH) adjustment							
+DSHCPG	Capital Disproportionate Share (DSH) adjustment							
+Operating CCR	Ratio of Medicare operating costs to Medicare covered charges from the March 2010 update of the Provider Specific File (PSF)							
+Capital CCR	Ratio of Medicare capital costs to Medicare covered charges from the March 2010 update of the Provider Specific File (PSF)							
+Provider Type	Type of provider - key:  0=IPPS; 7=RURAL REFERRAL CENTER (RRC); 8=INDIAN; 14=MEDICARE DEPENDENT  SMALL RURAL HOSP (MDH); 15 MDH/RRC 16=Sole Community Hospital (SCH); 17=SCH/RRC; 21=ESSENTIAL ACCESS CMTY HSP (EACH); 22=EACH/RRC							
+FY11 HSP Rate	82/87/96/06 Hospital Specific Payment (HSP) Rate updated to FY2011 for SCH providers; 82/87 /02 Hospital Specific Payment (HSP) rate  updated to FY 2011 for MDH providers.  							
+BILLS	"Total number of Medicare cases for the provider from the FY2009 MEDPAR, March 2010 Update"							
+TACMIV27	Transfer adjusted Case Mix Index under Grouper V27 							
+CASETA27	Transfer Adjusted Cases under Grouper V27 and FY 2010 Post Acute Transfer Policy							
+CMIV27	Case Mix Index under Grouper V27 for SCH/MDH providers paid under their Hospital Specific Payment rate							
+IME_TACMIV27	Transfer adjusted Case Mix under Grouper V27 for Medicare Advantage cases submitted by teaching hospitals that received a Fee-for-Service IME payment. These CMIs are included to calculate the IME payments for  budget neutrality. 							
+IME_CASETA27	Transfer adjusted  cases under Grouper V27 for Medicare Advantage cases submitted by teaching hospitals that receive a fee-for-service IME payment. The IME payment associated with these cases are included in the budget neutrality calculations and in payment modelling.							
+TACMIV28	Transfer adjusted Case Mix Index under Grouper V28							
+CASETA28	Transfer Adjusted Cases under Grouper V28  and FY2011 Post Acute Transfer Policy							
+CMIV28	Case Mix Index under Grouper V28 for SCH/MDH providers paid under their Hospital Specific Payment rate							
+IME_TACMIV28	Transfer adjusted Case Mix under Grouper V28 for Medicare Advantage cases submitted by teaching hospitals that received a Fee-for-Service IME payment. These CMIs are included to calculate the IME payments for  budget neutrality. 							
+IME_CASETA28	Transfer adjusted  cases under Grouper V28 for Medicare Advantage cases submitted by teaching hospitals that receive a fee-for-service IME payment. The IME payment associated with these cases are included in the budget neutrality calculations and in payment modelling.							
+FY 2011 GAF	Final Post Reclass Geographic adjustment factor (GAF) for Capital FY 2011							
+FY 2011 Puerto Rico Specific GAF	Final Post Reclass GAF for Capital for Puerto Rico Providers FY 2011							
+Cost of Living Adjustment-Capital	"Capital COLA factor for hospitals located in Alaska and Hawaii, which is based on the applicable operating IPPS COLA factor ."							
+OUT11F	Estimated operating outlier payments as a percentage of the provider's Federal operating PPS payments							
+COUT11F	 Estimated capital outlier payments as a percentage of the provider's Federal capital PPS payments							
+MCR_PCT	Medicare days as a percent of total inpatient days (not available for all providers that receive HSP rate) 							
+								
+								
+								
+"**The most recent available cost report data were used (FYs 2007 - 2008). A ""zero"" value may indicate unavailable or incomplete data. "								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								
+								

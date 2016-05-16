@@ -4,9 +4,11 @@ library(dplyr)
 
 # Import Medicare DSH data into separate dataframes
 # https://www.cms.gov/medicare/medicare-fee-for-service-payment/acuteinpatientpps/dsh.html
+# Original files assortment of xls formats with multiple sheets
+# these were exported as series of CSV files
 # did this as individual calls because the column names/numbers are different, so cant do regular rbind
 # Import DSH data into a list of dataframes
-dsh <- apply(data.frame(paste("rao_originaldata/medicare_dsh/",list.files("rao_originaldata/medicare_dsh/"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
+dsh <- apply(data.frame(paste("data/raw/medicare_dsh/", list.files("data/raw/medicare_dsh/"), sep = "")), 1, FUN = read.csv, header = T, stringsAsFactors = F)
 
 # This is a list of variables I want to keep 
 dvars <- c("Provider.Number", "Name", "BEDS", "ADC", "Average.Daily.Census", "DSHPCT", "URGEO", "DSHOPG", "DSHCPG", "MCR_PCT", "^CMI")
@@ -80,7 +82,8 @@ rm(dshcols, dvars, cmis, ChangeNames)
 #######################################
 # Now import/prep Hospital Info data
 # Load general hospital info from Medicare
-hospinfo <- read.csv("rao_originaldata/medicare/Hospital_General_Information.csv", header=TRUE, stringsAsFactors = FALSE)
+# https://data.medicare.gov/Hospital-Compare/Hospital-General-Information/xubh-q36u
+hospinfo <- read.csv("data/raw/medicare_general/Hospital_General_Information.csv", header = T, stringsAsFactors = F)
 
 # Keep only CA hospitals
 hospinfo <- hospinfo[grep("^05", hospinfo$Provider.ID),]
@@ -106,9 +109,9 @@ missing <- dsh %>%
 
 
 # save the missing hospitals to a csv to manually find addresses
-write.csv(missing, "rao_workingdata/missing.csv", row.names = F)
+write.csv(missing, "data/raw/medicare_dsh_unformatted/missing.csv", row.names = F)
 # re-import the DF once I've put addresses in manually
-missing <- read.csv("rao_workingdata/missing_completed.csv")
+missing <- read.csv("data/raw/medicare_dsh_unformatted/missing_completed.csv")
 # Geocode using ggmap to get lat/lon, combine with missing df
 missingcoords <- geocode(paste(missing$Address, missing$City, missing$ZIP.Code))
 missing <- cbind(missing, missingcoords)
@@ -183,4 +186,4 @@ safetynaph <- c(50320, 50211, 50276, 50315, 50373, 50376, 50040, 50717, 50262, 5
 dsh$safetynaph[dsh$providerid %in% safetynaph] <- T
 rm(safetynaph)
 
-saveRDS(dsh, file="rao_workingdata/dsh.rds")
+write.csv(dsh, file="data/tidy/dsh.csv", row.names = F)
