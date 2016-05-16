@@ -226,7 +226,9 @@ rm(opoa)
 
 # MDC
 # Import listing of MDCs (from OSHPD Appendix I v32.0)
-mdcindex <- read.csv("rao_originaldata/oshpd_appendix/appendix_mdc/mdc_index.csv", header=T, stringsAsFactors = F)
+# Original file available at: http://www.oshpd.ca.gov/HID/Data_Request_Center/documents/App_I_MDC_PDD.xlsx
+# Converted manually to CSV
+mdcindex <- read.csv("data/tidy/oshpd_appendix/appendix_mdc/mdc_index.csv", header=T, stringsAsFactors = F)
 
 # Merge with existing data
 pt <- pt %>% left_join(mdcindex)
@@ -238,7 +240,9 @@ pt$pay_cat <- factor(pt$pay_cat, levels=0:9, labels=c("Invalid", "Medicare", "Me
 
 # Payer Names
 # Import index of payer codes/names, obtained from OSHPD data dictionary files for each year (2006-2014)
-payers <- apply(data.frame(paste("rao_originaldata/oshpd_appendix/appendix_payers/",list.files("rao_originaldata/oshpd_appendix/appendix_payers"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
+# Original file available at http://www.oshpd.ca.gov/HID%2FData_Request_Center/documents/App_H_Plan-Code-Numbers_PDD.xlsx
+# Each sheet saved as separate csv file for import
+payers <- apply(data.frame(paste("data/tidy/oshpd_appendix/appendix_payers/",list.files("data/tidy/oshpd_appendix/appendix_payers"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
 # combine into one dataframe
 payers <- do.call(rbind, payers)
 
@@ -272,8 +276,6 @@ pt <- pt %>% select(-sev_code)
 
 # DRG used for 2007 data, MS-DRG used in 2008+
 # Used year-specific DRG/MSDRGs because Grouper changes each year
-# DRG/MSDRG fields taken from OSHPD data dictionary appendix
-
 # copy DRG from 2007 into MSDRG column so there's only one column to deal with
 pt[is.na(pt$msdrg),"msdrg"] <- pt[is.na(pt$msdrg),"drg"]
 
@@ -281,7 +283,9 @@ pt[is.na(pt$msdrg),"msdrg"] <- pt[is.na(pt$msdrg),"drg"]
 pt$msdrg_year <- year(pt$dschdate)
 
 # Import DRG/MSDRG (2007/2008+ listings, one file per year
-msdrg <- apply(data.frame(paste("rao_originaldata/oshpd_appendix/appendix_msdrg/",list.files("rao_originaldata/oshpd_appendix/appendix_msdrg"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
+# DRG/MSDRG fields taken from OSHPD data dictionary appendix
+# Original file available at http://www.oshpd.ca.gov/HID/Data_Request_Center/documents/App_J_MS-DRG_PDD.xlsx
+msdrg <- apply(data.frame(paste("data/tidy/oshpd_appendix/appendix_msdrg/",list.files("data/tidy/oshpd_appendix/appendix_msdrg"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
 # combine into a single DF
 msdrg <-  do.call(rbind, msdrg)
 

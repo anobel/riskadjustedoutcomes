@@ -10,7 +10,7 @@ library(sp)
 # ru <- read.csv("data/tidy/rural.csv")
 # resident <- readRDS("rao_workingdata/residents.rds")
 
-# oshpdxwalk <- readRDS("rao_workingdata/oshpdxwalk.rds")
+# oshpdxwalk <- read.csv("data/tidy/oshpdxwalk.csv")
 # pt <- readRDS("rao_workingdata/pt.rds")
 # pt <- readRDS("rao_workingdata/ptlite.rds")
 # ptgu <- readRDS("rao_workingdata/ptgu.rds")
@@ -20,7 +20,7 @@ library(sp)
 # Add Medicare ID to main patient file using OSHPD crosswalk
 # Load overall patient data and OSHPD crosswalk
 pt <- readRDS("rao_workingdata/pt.rds")
-oshpdxwalk <- readRDS("rao_workingdata/oshpdxwalk.rds")
+oshpdxwalk <- read.csv("data/tidy/oshpdxwalk.csv")
 
 # merge PT data and crosswalk using common column oshpd_id
 # this adds the medicare ID / provider ID to the patient data
