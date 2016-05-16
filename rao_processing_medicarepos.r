@@ -16,14 +16,14 @@ mp$year2009 <- c("https://www.cms.gov/Research-Statistics-Data-and-Systems/Downl
 mp$year2010 <- c("https://www.cms.gov/Research-Statistics-Data-and-Systems/Downloadable-Public-Use-Files/Provider-of-Services/Downloads/DEC10_OTHER_CSV.zip")
 
 # Create folder structure for the data that will be downloaded
-lapply(1:length(mp), function(x) dir.create(paste("rao_originaldata/medicarepos",names(mp)[x],sep="/"), showWarnings = F))
+lapply(1:length(mp), function(x) dir.create(paste("data/raw/medicarepos", names(mp)[x], sep="/"), showWarnings = F))
 
 # Download Medicare data
-lapply(1:length(mp), function(x) download.file(mp[[x]], paste("rao_originaldata/medicarepos/",names(mp)[x],"/",names(mp)[x],".zip", sep=""), mode="wb"))
+lapply(1:length(mp), function(x) download.file(mp[[x]], paste("data/raw/medicarepos/", names(mp)[x], "/", names(mp)[x], ".zip", sep = ""), mode = "wb"))
 
 # get list of the zip files, then use that list to identify the csv files within them, save names into vector
-filenames <- list.files("rao_originaldata/medicarepos/", recursive = T)
-filenames <- lapply(paste("rao_originaldata/medicarepos/",filenames, sep=""), function(x) unzip(x, list=T))
+filenames <- list.files("data/raw/medicarepos/", recursive = T)
+filenames <- lapply(paste("data/raw/medicarepos/", filenames, sep = ""), function(x) unzip(x, list=T))
 
 filenames <- unlist(filenames)
 filenames <- filenames[grepl("csv", filenames)]
@@ -35,7 +35,7 @@ filenames <- filenames[grepl("csv", filenames)]
 mpnames <- lapply(1:length(mp), 
                   function(x) fread(
                     unzip(
-                      paste("rao_originaldata/medicarepos/",list.files("rao_originaldata/medicarepos", recursive = T)[x], sep=""),
+                      paste("data/raw/medicarepos/",list.files("data/raw/medicarepos", recursive = T)[x], sep=""),
                       filenames[x]
                     ),
                     nrows = 0)
@@ -45,7 +45,7 @@ mpnames <- lapply(1:length(mp),
 mpdata <- lapply(1:length(mp), 
             function(x) fread(
                           unzip(
-                            paste("rao_originaldata/medicarepos/",list.files("rao_originaldata/medicarepos", recursive = T)[x], sep=""),
+                            paste("data/raw/medicarepos/",list.files("data/raw/medicarepos", recursive = T)[x], sep=""),
                             filenames[x]
                             )
                           , skip=2)
@@ -67,7 +67,7 @@ mpdata <- mpdata %>%
          state = PROV3230,
          residents = PROV1165
          ) %>%
-filter(state=="CA")
+filter(state == "CA")
 
 # select the number of residents for each facility, create flag if residency exists
 mpdata <- mpdata %>%
@@ -82,7 +82,7 @@ mpdata <- mpdata %>%
   ungroup()
 
 # Import data listing which programs have urology residencies
-residencygu <- read.csv("rao_originaldata/residentsGU.csv", header=T, stringsAsFactors = F)
+residencygu <- read.csv("data/tidy/residentsGU.csv", header=T, stringsAsFactors = F)
 residencygu <- select(residencygu, -fac_name)
 
 # Merge with Medicare residency data
@@ -90,9 +90,9 @@ mpdata <- mpdata %>%
   left_join(residencygu)
 
 # if NA, assign it as No
-mpdata$residencygu[mpdata$residencygu=="Yes"] <- T
+mpdata$residencygu[mpdata$residencygu == "Yes"] <- T
 mpdata$residencygu[is.na(mpdata$residencygu)] <- F
 mpdata$residencygu <- as.logical(mpdata$residencygu)
 
 # Save data
-saveRDS(mpdata, file="rao_workingdata/residents.rds")
+write.csv(mpdata, file="data/tidy/residents.csv", row.names = F)
