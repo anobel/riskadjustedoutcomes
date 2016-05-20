@@ -1,5 +1,5 @@
 # Beyond Classical Risk Adjustment
-## Socioeconomic Adjustment and Hospital Performance in Urologic Oncology
+## Socioeconomic Status and Hospital Performance in Urologic Oncology
 
 Anobel Y. Odisho MD MPH, Ruth Etzioni PhD, John L. Gore, MD MS
 
