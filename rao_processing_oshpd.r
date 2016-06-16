@@ -78,7 +78,7 @@ codes$minimal <- c("1742", "1743", "1744", "1749", "5421")
 ##################
 
 # Import OSHPD data into a list of dataframes
-pt <- apply(data.frame(paste("rao_originaldata/oshpd/",list.files("rao_originaldata/oshpd/"),sep="")), 1, FUN=fread, na.strings=c(""), header=TRUE, stringsAsFactors=TRUE)
+pt <- apply(data.frame(paste("data/patient/raw/oshpd/",list.files("data/patient/raw/oshpd/"),sep="")), 1, FUN=fread, na.strings=c(""), header=TRUE, stringsAsFactors=TRUE)
 
 # row binds all the dataframes in the list into one frame
 pt <- rbind_all(pt)
@@ -86,68 +86,90 @@ pt <- rbind_all(pt)
 # place columns in alphabetical order (ignore incorrect numerical ordering)
 pt <- pt[,sort(colnames(pt))]
 
-# make a smaller subset to make it easier to work with (random sample of 100k rows)
-# In future, can just remove this line for full analysis
-# pt <- droplevels(pt[sample(1:nrow(pt), 10^4, replace=F),])
+# Import OSHPD death linked data into a list of dataframes
+dead <- apply(data.frame(paste("data/patient/raw/oshpd_death/",list.files("data/patient/raw/oshpd_death/"),sep="")), 1, FUN=fread, na.strings=c(""), header=TRUE, stringsAsFactors=TRUE)
+
+# combine into a single data frame
+dead <- rbind_all(dead)
 
 ##################
 #### Data Cleaning
 ##################
+# Drop patients with no RLN, cannot link to discharge data. approx 7800 patients (0.8%)
+# limit to specific variables
+dead <- dead %>% 
+  filter(rln!="---------") %>%
+  select(rln, v_s_ddate, unc_icd10, facility, place_de, patzip_death = patzip)
 
 # Drop if RLN is missing (based on Social Security Number, so patients without SSN have missing RLN)
 # Cannot track outcomes for these patients. May introduce bias.
 pt <- pt %>% filter(rln!="---------")
 
+# combine patient data with death data by record locator
+pt <- pt %>%
+  left_join(dead, by = "rln")
+
+rm(dead)
+
 # Format all dates to POSIX
 # make a vector identifying the date fields
-d <- c("admtdate", "bthdate", "dschdate", "proc_pdt", paste("procdt", 1:20, sep=""))
+d <- c("v_s_ddate", "admtdate", "bthdate", "dschdate", "proc_pdt", paste("procdt", 1:20, sep = ""))
 
 # Convert date fields from factor to character, replace in dataframe
-pt[,d] <- as.data.frame(lapply(pt[,d], as.character), stringsAsFactors = F)
+pt[, d] <- as.data.frame(lapply(pt[, d], as.character), stringsAsFactors = F)
 
 # Convert date fields from character to POSIXct using lubridate, replace in dataframe
-pt[,d] <- as.data.frame(lapply(pt[,d], parse_date_time, orders="mdY"))
+pt[, d] <- as.data.frame(lapply(pt[, d], parse_date_time, orders = "mdY"))
 
 # Drop if admit date is prior to 2006, these must be data entry errors
-pt <- pt[year(pt$admtdate)>2005,]
+pt <- pt[year(pt$admtdate) > 2005,]
 
 # Clean workspace
 rm(d)
 
 # Admission Type
-pt$admtype <- factor(pt$admtype, levels=c(1,2,3,4,0), labels=c("Scheduled", "Unscheduled", "Infant", "Unknown", "Blank"))
-pt <- pt %>% filter(admtype!="Infant")
+pt$admtype <- factor(pt$admtype,
+                     levels = c(1,2,3,4,0),
+                     labels = c("Scheduled", "Unscheduled", "Infant", "Unknown", "Blank"))
+pt <- pt %>% filter(admtype != "Infant")
 
 # Licensure of Hospital
-pt$typcare <- factor(pt$typcare, levels = c(0, 1, 3, 4, 5, 6), labels=c("Blank", "Acute Care", "SNF", "Psychiatric", "Drug Rehab", "Physical Rehab"))
+pt$typcare <- factor(pt$typcare,
+                     levels = c(0, 1, 3, 4, 5, 6),
+                     labels = c("Blank", "Acute Care", "SNF", "Psychiatric", "Drug Rehab", "Physical Rehab"))
 
 # Disposition
-pt$disp <- factor(pt$disp, levels=0:13, labels=c("Invalid", "Home", "Acute Care", "Other Care Level", "SNF", "Acute-Other Facility", "Other Care Level-Other Facility", "SNF-Other Facility", "Residential Care", "Incarcerated", "AMA", "Died", "Home Health", "Other"))
-
-# Assign weekdays to the date of discharge
-pt$dschweekday <- wday(pt$dschdate, label=T)
+pt$disp <- factor(pt$disp,
+                  levels = 0:13,
+                  labels = c("Invalid", "Home", "Acute Care", "Other Care Level", "SNF", "Acute-Other Facility", "Other Care Level-Other Facility", "SNF-Other Facility", "Residential Care", "Incarcerated", "AMA", "Died", "Home Health", "Other"))
 
 ### Demographics
-# Sex
 # Keep only male/female categories
-pt <- pt %>% filter(sex<3)
+pt <- pt %>% filter(sex < 3)
+
 # factor sex variable
-pt$sex <- factor(pt$sex, levels=1:2, labels=c("Male", "Female"))
+pt$sex <- factor(pt$sex, 
+                 levels  = 1:2, 
+                 labels = c("Male", "Female"))
 
 # Age
-# To prep for analysis, set age 18 as the baseline (0), and divide by 10 for ease of interpretation
-pt$agyradmcentered <- (pt$agyradm-18)/10
 # drop age at discharge and birthdate
 pt <- pt %>% select(-agyrdsch, -bthdate)
 
 # Ethnicity (Self-Report); drop invalid but keep unknowns
-pt$ethncty <- factor(pt$ethncty, levels=0:3, labels=c("Invalid", "Hispanic", "Non-Hispanic", "Unknown"))
+pt$ethncty <- factor(pt$ethncty, 
+                     levels = 0:3, 
+                     labels = c("Invalid", "Hispanic", "Non-Hispanic", "Unknown"))
 
 # Race/Ethnicity (Self - Report)
-pt$race <- factor(pt$race, levels=0:6, labels=c("Invalid", "White", "Black", "NativeAm", "AsianPI", "Other", "Unknown"))
+pt$race <- factor(pt$race,
+                  levels = 0:6,
+                  labels = c("Invalid", "White", "Black", "NativeAm", "AsianPI", "Other", "Unknown"))
 
 # Race normalized to include Hispanic ethnicity per OSHPH
-pt$race_grp <- factor(pt$race_grp, levels=0:5, labels = c("Unknown", "White", "Black", "Hispanic", "AsianPI", "NativeAm"))
+pt$race_grp <- factor(pt$race_grp,
+                      levels = 0:5,
+                      labels = c("Unknown", "White", "Black", "Hispanic", "AsianPI", "NativeAm"))
 
 # Language
 # Drop two primary language fields: write in and ID, just keep the abbreviation field
@@ -155,7 +177,7 @@ pt <- pt %>% select(-pls_id, -pls_wrtin)
 
 # Hospital County (NOT coded as FIPS codes, jsut numerically 1:58)
 # load list of California Counties from Area Health Reseource File
-load("rao_workingdata/arf12.rda")
+load("data/tidy/arf12.rda")
 county <- arf12[arf12$f00011==6,c(10)]
 
 # Create data frame with index 1:total number of counties, and counties in alphabetical order
@@ -180,17 +202,17 @@ rm(arf12, arf12cols, county)
 # # Identify hospitals that for some reason do not have ZIP codes, will have to assign them manually
 # 
 # # Manually enter zip codes (found from OSHPD financial records)
-# pt$hplzip[pt$oshpd_id==300032] <- 92868
-# pt$hplzip[pt$oshpd_id==301127] <- 92621
-# pt$hplzip[pt$oshpd_id==301140] <- 92869
-# pt$hplzip[pt$oshpd_id==301279] <- 92868
-# pt$hplzip[pt$oshpd_id==301283] <- 92843
-# pt$hplzip[pt$oshpd_id==301297] <- 92870
-# pt$hplzip[pt$oshpd_id==301357] <- 92780
-# pt$hplzip[pt$oshpd_id==304045] <- 92618
-# pt$hplzip[pt$oshpd_id==304079] <- 92780
-# pt$hplzip[pt$oshpd_id==331152] <- 92882
-# pt$hplzip[pt$oshpd_id==370759] <- 91950
+pt$hplzip[pt$oshpd_id==300032] <- 92868
+pt$hplzip[pt$oshpd_id==301127] <- 92621
+pt$hplzip[pt$oshpd_id==301140] <- 92869
+pt$hplzip[pt$oshpd_id==301279] <- 92868
+pt$hplzip[pt$oshpd_id==301283] <- 92843
+pt$hplzip[pt$oshpd_id==301297] <- 92870
+pt$hplzip[pt$oshpd_id==301357] <- 92780
+pt$hplzip[pt$oshpd_id==304045] <- 92618
+pt$hplzip[pt$oshpd_id==304079] <- 92780
+pt$hplzip[pt$oshpd_id==331152] <- 92882
+pt$hplzip[pt$oshpd_id==370759] <- 91950
 
 # Convert all ZIP codes to ZCTAs
 zcta <- read.csv("data/tidy/zcta.csv")
@@ -215,20 +237,25 @@ rm(zcta)
 
 # Was Diagnosis Present On Admission?
 # Principal Diagnosis Present on Admission
-pt$poa_p <- factor(pt$poa_p, levels=c("Y", "N", "E", "U", "W", "0"), labels=c("Yes", "No", "Exempt", "Unknown", "Clinically Undetermined", "Invalid"))
+pt$poa_p <- factor(pt$poa_p,
+                   levels = c("Y", "N", "E", "U", "W", "0"),
+                   labels = c("Yes", "No", "Exempt", "Unknown", "Clinically Undetermined", "Invalid"))
 
 # Other Diagnoses Present on Admission
 # create vector for all 24 Other Present on Admission diagnosis fields
-opoa <- paste("opoa", 1:24, sep="")
+opoa <- paste("opoa", 1:24, sep = "")
 # Relabel Factors
-pt[,opoa] <- as.data.frame(lapply(pt[,opoa], factor, levels=c("Y", "N", "E", "U", "W", "0"), labels=c("Yes", "No", "Exempt", "Unknown", "Clinically Undetermined", "Invalid")))
+pt[,opoa] <- as.data.frame(lapply(pt[, opoa], factor,
+                                  levels = c("Y", "N", "E", "U", "W", "0"),
+                                  labels = c("Yes", "No", "Exempt", "Unknown", "Clinically Undetermined", "Invalid")))
 rm(opoa)
 
 # MDC
 # Import listing of MDCs (from OSHPD Appendix I v32.0)
 # Original file available at: http://www.oshpd.ca.gov/HID/Data_Request_Center/documents/App_I_MDC_PDD.xlsx
 # Converted manually to CSV
-mdcindex <- read.csv("data/tidy/oshpd_appendix/appendix_mdc/mdc_index.csv", header=T, stringsAsFactors = F)
+mdcindex <- read.csv("data/tidy/oshpd_appendix/appendix_mdc/mdc_index.csv",
+                     header = T, stringsAsFactors = F)
 
 # Merge with existing data
 pt <- pt %>% left_join(mdcindex)
@@ -236,13 +263,17 @@ rm(mdcindex)
 
 ## Payers
 # Payer Category
-pt$pay_cat <- factor(pt$pay_cat, levels=0:9, labels=c("Invalid", "Medicare", "Medi-Cal", "Private", "Workers Comp", "County Indigent", "Other Govt", "Other Indigent", "Self Pay", "Other Payer"))
+pt$pay_cat <- factor(pt$pay_cat,
+                     levels = 0:9,
+                     labels = c("Invalid", "Medicare", "Medi-Cal", "Private", "Workers Comp", "County Indigent", "Other Govt", "Other Indigent", "Self Pay", "Other Payer"))
 
 # Payer Names
 # Import index of payer codes/names, obtained from OSHPD data dictionary files for each year (2006-2014)
 # Original file available at http://www.oshpd.ca.gov/HID%2FData_Request_Center/documents/App_H_Plan-Code-Numbers_PDD.xlsx
 # Each sheet saved as separate csv file for import
-payers <- apply(data.frame(paste("data/tidy/oshpd_appendix/appendix_payers/",list.files("data/tidy/oshpd_appendix/appendix_payers"),sep="")), 1, FUN=read.csv, header=T, stringsAsFactors=F)
+payers <- apply(data.frame(paste("data/tidy/oshpd_appendix/appendix_payers/",
+                                 list.files("data/tidy/oshpd_appendix/appendix_payers"), sep = "")),
+                1, FUN = read.csv, header = T, stringsAsFactors = F)
 # combine into one dataframe
 payers <- do.call(rbind, payers)
 
@@ -260,17 +291,22 @@ payers <- payers %>%
   ungroup()
 
 # merge with main data 
-pt <- pt %>% left_join(payers, by = c("pay_plan" = "plan_code"))
+pt <- pt %>% 
+  left_join(payers, by = c("pay_plan" = "plan_code"))
 
 # Clean environment
 rm(payers)
 
 # Payer Type
-pt$pay_type <- factor(pt$pay_type, levels=c(0, 1, 2, 3), labels=c("Not Applicable", "HMO - KnoxKeene or MCOHS", "HMO - Other", "Traditional Care - FFS"))
+pt$pay_type <- factor(pt$pay_type,
+                      levels = c(0, 1, 2, 3),
+                      labels = c("Not Applicable", "HMO - KnoxKeene or MCOHS", "HMO - Other", "Traditional Care - FFS"))
 
 ## MS DRGs
 # MS-DRG Severity Code
-pt$sev_code <- factor(pt$sev_code, levels=0:2, labels=c("Not CC/MCC Based", "MCC Based", "CC Based"))
+pt$sev_code <- factor(pt$sev_code,
+                      levels = 0:2,
+                      labels = c("Not CC/MCC Based", "MCC Based", "CC Based"))
 # but drop severity code, not a useful variable in this analysis
 pt <- pt %>% select(-sev_code)
 
@@ -305,16 +341,16 @@ pt <- pt %>% left_join(msdrg)
 rm(msdrg)
 
 # create visitId variable (combining RLN and admission date) for assigning Elixhauser codes
-pt$visitId = paste(pt$rln, pt$admtdate, sep="_")
+pt$visitId = paste(pt$rln, pt$admtdate, sep = "_")
 
 ###################################
 #### Assign Elixhauser Comorbidity
 ###################################
 
 # create vector listing just the fields with diagnosis codes
-diags <- c("diag_p", paste("odiag",1:24,sep=""))
-odiags <- c(paste("odiag",1:24,sep=""))
-opoas <- c(paste("opoa",1:24,sep=""))
+diags <- c("diag_p", paste("odiag", 1:24, sep = ""))
+odiags <- c(paste("odiag", 1:24, sep = ""))
+opoas <- c(paste("opoa", 1:24, sep = ""))
 
 # Calculate the total number of listed ICD9 diagnoses per patient
 pt$totaldx <- apply(pt[,diags], 1, function(x) sum(!is.na(x)))
@@ -372,7 +408,6 @@ rm(diag_p)
 
 # based on ICD9s for each patient/admission, excluding ICDs NOT Present on Admission,
 # make matrix of all 30 Elixhauser categories (T/F)
-
 elix <- as.data.frame(icd9ComorbidElix(elix, visitId="visitId", icd9Field="icd9"))
 
 # add visitId as index and drop rownames
@@ -402,7 +437,7 @@ set_default_cluster(cluster)
 # Limit to the fields necessary for this calculation
 # group by rln and arrange in preparation for splitting for parallel
 readmit <- pt %>% 
-  select(rln, admtype, admtdate, dschdate, disp) %>%
+  select(rln, admtype, admtdate, dschdate, v_s_ddate, disp) %>%
   group_by(rln) %>%
   arrange(rln, admtdate)
 
@@ -415,20 +450,23 @@ readmit <- partition(readmit, rln)
 # Does not count as readmission if it was a scheduled admission
 # Exclude admissions from being eligible for readmission if the dispo was:
 # AMA, Incarcerated, Died, Acute-Other Facility, Other Care Level-Other Facility
-
 readmit <- readmit %>%
-  mutate(los = difftime(dschdate, admtdate, units="days")) %>%
-  mutate(readmitdaysadm = difftime(lead(admtdate),admtdate, units="days")) %>%
-  mutate(readmitdaysdc = difftime(lead(admtdate),dschdate, units="days")) %>%
-  mutate(within30adm = ifelse(readmitdaysadm<= 30 & readmitdaysadm!=0, T, F)) %>%
-  mutate(within30dc = ifelse(readmitdaysdc<= 30 & readmitdaysdc!=0, T, F)) %>%
-  mutate(within90dc = ifelse(readmitdaysdc<= 90 & readmitdaysdc!=0, T, F)) %>%
-  mutate(isreadmit30adm = ifelse(within30adm==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F)) %>%
-  mutate(isreadmit30dc = ifelse(within30dc==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F)) %>%
-  mutate(isreadmit90dc = ifelse(within90dc==T & lead(admtype) !="Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
+  mutate(los = difftime(dschdate, admtdate, units = "days"),
+         deathdays = difftime(v_s_ddate, dschdate, units = "days"),
+         readmitdaysadm = difftime(lead(admtdate), admtdate, units = "days"),
+         readmitdaysdc = difftime(lead(admtdate), dschdate, units = "days")) %>%
+  mutate(within30adm = ifelse(readmitdaysadm <= 30 & readmitdaysadm != 0, T, F),
+         within30dc = ifelse(readmitdaysdc <= 30 & readmitdaysdc != 0, T, F),
+         within90dc = ifelse(readmitdaysdc <= 90 & readmitdaysdc != 0, T, F),
+         death30d = ifelse(deathdays >0 & deathdays <= 30, T, F),
+         death90d = ifelse(deathdays >0 & deathdays <= 90, T, F)) %>%
+  mutate(isreadmit30adm = ifelse(within30adm == T & lead(admtype) != "Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F),
+         isreadmit30dc = ifelse(within30dc == T & lead(admtype) != "Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F),
+         isreadmit90dc = ifelse(within90dc == T & lead(admtype) != "Scheduled" & !(disp %in% c("AMA", "Incarcerated", "Died", "Acute-Other Facility", "Other Care Level-Other Facility")), T, F))
 
 # Recombine 
 readmit <- collect(readmit)
+readmit <- readmit %>% ungroup()
 rm(cluster)
 
 # Any fields that were not tagged as readmits will be marked FALSE
@@ -438,17 +476,29 @@ readmit$within30dc[is.na(readmit$within30dc)] <- F
 readmit$isreadmit30dc[is.na(readmit$isreadmit30dc)] <- F
 readmit$within90dc[is.na(readmit$within90dc)] <- F
 readmit$isreadmit90dc[is.na(readmit$isreadmit90dc)] <- F
+readmit$death30d[is.na(readmit$death30d)] <- F
+readmit$death90d[is.na(readmit$death90d)] <- F
 
 # Merge readmit assignments back to main patient data
+pt <- pt %>% ungroup()
+
 pt <- readmit %>%
-  select(rln, admtdate, los, readmitdaysadm, readmitdaysdc, within30adm, within30dc, within90dc, isreadmit30adm, isreadmit30dc, isreadmit90dc) %>%
+  select(rln, admtdate, los, readmitdaysadm, readmitdaysdc, within30adm, within30dc, within90dc, isreadmit30adm, isreadmit30dc, isreadmit90dc, deathdays, death30d, death90d) %>%
   right_join(pt)
 
 rm(readmit)
 
 # Keep ONLY acute care visits (remove pychiatric/physical rehab admissions as allowable index admissions)
 # Drop type care variable
-pt <- pt %>% filter(typcare=="Acute Care") %>% select(-typcare)
+pt <- pt %>% 
+  filter(typcare == "Acute Care") %>% 
+  select(-typcare)
+
+# Create composite metric of death or readmission within 30 or 90 days
+pt$readmitdeath30d <- pt$isreadmit30dc | pt$death30d
+pt$readmitdeath90d <- pt$isreadmit90dc | pt$death90d
+
+saveRDS(pt, file="data/patient/tidy/ptreadmit.rds")
 
 #####################################
 #### Procedure Specific Cohorts
