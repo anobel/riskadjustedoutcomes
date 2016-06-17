@@ -70,6 +70,35 @@ codes$SxRP <- c("605", "6050")
 # RPLND Procedure Codes (Mossanen 2014)
 codes$SxRPLND <- c("590", "5900", "5902", "5909", "4029", "403", "4052", "4059")
 
+# Birkmeyer cohorts, from Finks, J. F., Osborne, N. H., & Birkmeyer, J. D. (2011).
+# Trends in Hospital Volume and Operative Mortality for High-Risk Surgery.
+# The New England Journal of Medicine, 364(22), 2128–2137.
+
+# Codes for AAA, and exclude thoracic aneurysms and ruptured abdominal aneurysms
+codes$SxAAA <- c("3834", "3844", "3864", "3925", "3971")
+codes$SxNotAAA <- c("4411", "4412", "4413", "4415", "4416")
+
+# Codes for CABG
+# if valve replacement done during CABG, then code as CABG
+codes$SxCABG <- c("3510", "3512", "3513", "3514",
+                 "3520", "3523", "3524", "3525", "3526", "3527", "3528", "3529",
+                 "3610", "3611", "3612", "3613", "3614", "3615", "3616", "3617", "3619")
+
+# Codes for Aortic Valve replacement only
+codes$SxAVR <- c("3511", "3521", "3522")
+
+# Codes for Carotid Endarterectomy
+codes$SxCEA <- c("3812")
+
+# Codes for Esophagectomy
+codes$SxEsoph <- c("4240", "4241", "4242", "4399")
+
+# Codes for Pancreatectomy
+codes$SxPanc <- c("5251", "5253", "526", "527")
+
+# Codes for lung resection (wedge, lobectomy, and pneumonectomy)
+codes$SxLung <- c("323", "3230", "3239", "324", "3241", "3249", "325", "3250", "3259")
+
 # Codes for lap or robot
 codes$minimal <- c("1742", "1743", "1744", "1749", "5421")
 
@@ -498,14 +527,12 @@ pt <- pt %>%
 pt$readmitdeath30d <- pt$isreadmit30dc | pt$death30d
 pt$readmitdeath90d <- pt$isreadmit90dc | pt$death90d
 
-saveRDS(pt, file="data/patient/tidy/ptreadmit.rds")
-
 #####################################
 #### Procedure Specific Cohorts
 #####################################
 # Create vectors for future use
-diags <- c("diag_p", paste("odiag",1:24,sep=""))
-procs <- c("proc_p", paste("oproc",1:20,sep=""))
+diags <- c("diag_p", paste("odiag", 1:24,sep = ""))
+procs <- c("proc_p", paste("oproc", 1:20,sep = ""))
 
 # Create empty DF with RLNs to populate
 cohort <- as.data.frame(pt$rln)
@@ -516,49 +543,81 @@ cohort <- as.data.frame(pt$rln)
 cohort$DxBladderCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxBladderCa)))
 cohort$DxKidneyCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxKidneyCa)))
 cohort$DxProstateCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxProstateCa)))
-cohort$DxTestisCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxTestisCa & pt$sex=="Male")))
+cohort$DxTestisCa <- rowSums(as.data.frame(lapply(select(pt, one_of(c(diags))), function(x) x %in% codes$DxTestisCa & pt$sex == "Male")))
 
 # Use lapply across all procedure fields (not just principal procedure)
 # Assign 1 if matches something in codes vector, and then add up rowsums
+# Urology Cohorts
 cohort$SxCystectomy <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxCystectomy)))
 cohort$SxRadNx <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRadNx)))
 cohort$SxPartialNx <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxPartialNx)))
 cohort$SxRP <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRP)))
 cohort$SxRPLND <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxRPLND)))
 
+# General Surgery Cohorts
+cohort$SxAAA <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxAAA)))
+cohort$SxNotAAA <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxNotAAA)))
+cohort$SxCABG <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxCABG)))
+cohort$SxAVR <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxAVR)))
+cohort$SxCEA <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxCEA)))
+cohort$SxEsoph <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxEsoph)))
+cohort$SxPanc <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxPanc)))
+cohort$SxLung <- rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$SxLung)))
+
 # Assign cohorts in main patient dataframe
 # Each patient can only be in one cohort (for now)
 # Can create possibilities for multiple cohorts if necessary for other analyses
 pt$cohort <- NA
-pt$cohort[cohort$DxKidneyCa>0 & cohort$SxRadNx>0] <- "RadNx"
-pt$cohort[cohort$DxKidneyCa>0 & cohort$SxPartialNx>0] <- "PartialNx"
-pt$cohort[cohort$DxProstateCa>0 & cohort$SxRP>0 & pt$sex=="Male"] <- "RP"
+pt$cohort[cohort$DxKidneyCa > 0 & cohort$SxRadNx > 0] <- "RadNx"
+pt$cohort[cohort$DxKidneyCa > 0 & cohort$SxPartialNx > 0] <- "PartialNx"
+pt$cohort[cohort$DxProstateCa > 0 & cohort$SxRP > 0 & pt$sex == "Male"] <- "RP"
 
 # Assign cystectomy AFTER prostatectomy
 # often cystoprostatectomy is coded as cystectomy AND prostatectomy, this way its assigned to cystectomy cohort
-pt$cohort[cohort$DxBladderCa>0 & cohort$SxCystectomy>0] <- "Cystectomy"
+pt$cohort[cohort$DxBladderCa > 0 & cohort$SxCystectomy > 0] <- "Cystectomy"
 
 # Limiting RPLND to Males only. Although it should be obvious from Dx codes for testis cancer,
 # 198.82 "Secondary malignant neoplasm of genital organs" is often used for gyn malignancies (>1300 cases)
-pt$cohort[cohort$DxTestisCa>0 & cohort$SxRPLND>0 & pt$sex=="Male"] <- "RPLND"
+pt$cohort[cohort$DxTestisCa > 0 & cohort$SxRPLND > 0 & pt$sex == "Male"] <- "RPLND"
 
 # Exclude if patients have the following combinations of surgeries AND diagnoses
 # Cystectomy and RPLND, Bladder cancer AND Testis Cancer
-pt$cohort[cohort$SxCystectomy>0 & cohort$DxBladderCa>0 & cohort$SxRPLND>0 & cohort$DxTestisCa>0] <- "Multiple GU Sx"
+pt$cohort[cohort$SxCystectomy > 0 & cohort$DxBladderCa > 0 & cohort$SxRPLND > 0 & cohort$DxTestisCa > 0] <- "Multiple GU Sx"
 
 # Cystectomy AND Radical or Partial Nx, Bladder and Kidney Cancer
-pt$cohort[cohort$SxCystectomy>0 & cohort$DxBladderCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0)] <- "Multiple GU Sx"
+pt$cohort[cohort$SxCystectomy > 0 & cohort$DxBladderCa > 0 & cohort$DxKidneyCa > 0 & (cohort$SxRadNx > 0 |cohort$SxPartialNx > 0)] <- "Multiple GU Sx"
 
 # Prostate and Kidney cancer, RP and Radical or Partial Nx
-pt$cohort[cohort$SxRP>0 & cohort$DxProstateCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0)] <- "Multiple GU Sx"
+pt$cohort[cohort$SxRP > 0 & cohort$DxProstateCa > 0 & cohort$DxKidneyCa > 0 & (cohort$SxRadNx > 0 |cohort$SxPartialNx > 0)] <- "Multiple GU Sx"
 
 # Testis and Kidney cancer, RPLND and Radical or Partial Nx
-pt$cohort[cohort$SxRPLND>0 & cohort$DxTestisCa>0 & cohort$DxKidneyCa>0 & (cohort$SxRadNx>0 |cohort$SxPartialNx>0) & pt$sex!="Male"] <- "Multiple GU Sx"
+pt$cohort[cohort$SxRPLND > 0 & cohort$DxTestisCa > 0 & cohort$DxKidneyCa > 0 & (cohort$SxRadNx > 0 |cohort$SxPartialNx > 0) & pt$sex != "Male"] <- "Multiple GU Sx"
+
+# AAA, excluding thoracic AA and ruptured aneurysms
+pt$cohort[cohort$SxAAA > 0 & cohort$SxNotAAA == 0] <- "AAA"
+
+# CABG
+pt$cohort[cohort$SxCABG > 0] <- "CABG"
+
+# Aortic Valve Replacement, but if AVR done with CABG, assigned to CABG cohort
+pt$cohort[cohort$SxAVR > 0] <- "AVR"
+pt$cohort[cohort$SxAVR > 0 & cohort$SxCABG > 0] <- "CABG"
+
+# CEA
+pt$cohort[cohort$SxCEA > 0] <- "CEA"
+
+# Esophagectomy
+pt$cohort[cohort$SxEsoph > 0] <- "Esoph"
+
+# Pancreatectomy
+pt$cohort[cohort$SxPanc > 0] <- "Panc"
+
+# Lung Resection
+pt$cohort[cohort$SxLung > 0] <- "Lung"
 
 # assign if case was Open or Lap/Robot
 pt$open <- ifelse(
-  rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$minimal)))==0,
-  T,F)
+  rowSums(as.data.frame(lapply(select(pt, one_of(c(procs))), function(x) x %in% codes$minimal))) == 0, T, F)
 
 # Calculate mean annual number of procedures per hospital for each category, and assign quintiles
 # generate years variable, which counts number of years of data included
@@ -605,10 +664,4 @@ pt <- pt %>%
     loslong5 = ifelse(losquint == 5, T, F),
     loslong10 = ifelse(losdec == 10, T, F))
 
-saveRDS(pt, file="rao_workingdata/pt.rds")
-
-# Once complete, run rao_processing_all.r to combine with other datasets
-
-# Misc
-# to get listing of ICD9 descriptions for each patient
-# apply(pt[4,diags], 1, function(x) icd9Explain(x[icd9IsReal(x)]))
+saveRDS(pt, file = "data/patient/tidy/pt.rds")
