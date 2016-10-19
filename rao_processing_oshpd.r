@@ -649,7 +649,7 @@ pt <- pt %>%
   group_by(oshpd_id, cohort) %>%
   dplyr::summarise(
     cohortadmits = n(),
-    cohortdeaths = sum(disp=="Died")) %>%
+    cohortdeaths = sum(disp == "Died")) %>%
   mutate(cohortmortality = (cohortdeaths/cohortadmits)*100) %>%
     arrange(desc(cohortdeaths)) %>%
   right_join(pt)
