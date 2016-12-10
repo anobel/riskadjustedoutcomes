@@ -1,0 +1,438 @@
+---
+title: "Risk Adjusted Outcomes for Urologic Oncology"
+subtitle: "O/E Evaluation"
+author: "Anobel Y Odisho, Ruth Etzioni, John L Gore"
+date: "`r Sys.Date()`"
+output: 
+  tufterhandout::html_tufte_handout:
+  theme: cosmo
+css: floating.css
+toc: yes
+params:
+  cohort: ""
+---
+  
+  
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, cache=F)
+```
+
+<!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
+  <style>
+  td {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+</style>
+  
+```{r packages, cache=F}
+# Data Cleaning Packages
+library(dplyr)      # Data Management
+library(tidyr)      # Data Cleaning
+library(stringr)    # String manipulation
+
+# Graphics Packages
+library(ggplot2)    # Graphics
+library(ggthemes)   # Themes for ggplot
+library(DT)         # HTML Widget for Data Tables
+library(stargazer)  # HTML Tables for regression results
+library(knitr)
+library(RColorBrewer)# Color palettes from Cynthia Brewer
+
+# Specialty/Stats Packages
+library(ROCR)       # Performance measures, ROC curves, AUC
+library(lme4)       # Mixed Effects Models
+library(coin)       # Permutation Testing
+```
+
+```{r constants.functions, cache=F}
+bg <- "#FCFCFA"
+main1 <- "#ca0020"
+acc1 <- "#f4a582"
+main2 <- "#92c5de"
+acc2 <- "#0571b0"
+
+resPairsTable <- function(x) {
+  matsize <- length(grep("p_", names(pred)))
+  p <- lapply(1:length(x), function(y) format.pval(x[[y]]$p.value, eps = 0.001, digits=3))
+  ptable <- diag(matsize)
+  ptable[lower.tri(ptable, diag=F)] <- p
+  t(ptable)
+  ptable <- matrix(ptable, nrow=matsize, ncol=matsize, byrow=T)
+  rownames(ptable) = grep("p_", names(pred), value=T)
+  colnames(ptable) = grep("p_", names(pred), value=T)
+  ptable[ptable==0] <- ""
+  ptable[ptable==1] <- ""
+  return(kable(ptable))
+}
+
+## Function to generate table of permutation testing p-values
+resPermsTable <- function(x, nummodels) {
+  matsize <- nummodels+1
+  p <- lapply(x, pvalue)
+  p <- lapply(p, function(y) format.pval(y, eps = 0.001, digits=3))
+  ptable <- diag(matsize)
+  ptable[lower.tri(ptable, diag=F)] <- p
+  t(ptable)
+  ptable <- matrix(ptable, nrow=matsize, ncol=matsize, byrow=T)  
+  rownames(ptable) = grep("^r_", names(pred), value=T)
+  colnames(ptable) = grep("^r_", names(pred), value=T)
+  ptable[ptable==0] <- ""
+  ptable[ptable==1] <- ""
+  return(kable(ptable))
+}
+
+# function to calculate all possible combinations of ranks
+comboDiffs <- function(x) {
+  df <- lapply(seq_along(combinations), function (y) {
+    pred <- pred[pred$cohort==x,colnames(pred) %in% unlist(combinations[y])]
+    result <- unlist(pred[,1])-unlist(pred[,2])
+    return(result)
+  }) 
+  names(df) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+  df <- as.data.frame(df)
+  df$cohort <- x
+  return(df)
+}
+
+```
+
+```{r loaddata}
+# Import data, keep only Cystectomy, Partial Nephrectomy, and Radical Nephrectomy cohorts
+# exclude hospitals with only 1 observation
+# drop patients with missing zip codes
+ptgu <- readRDS("data/patient/tidy/ptgu.rds") %>%
+  filter(cohort %in% c("Cystectomy", "PartialNx", "RadNx")) %>%
+  group_by(cohort, oshpd_id) %>%
+  filter(n()>1) %>%
+  filter(!is.na(patzcta))
+
+# List variables that will be scaled for models
+toscale <- c("agyradmcentered", "agyradm",
+             "elixsum", 
+             "bedsMean", "adcMean", "dsh_pctMean", "mcr_pctMean", "cmiMean",
+             "ethwhite", "ethblack", "ethlatin", "ethasian", "ethother",
+             "medianincome", "capincome", "housevalue",
+             "edunohs",	"eduhs", "educollege", "empexec",
+             "gini", "iceinc", "iceedu", "iceeth", "hoodzscore", 
+             "km", "hours", 
+             "los", "cohortmortality", "residentnum")
+
+# scale and center variables
+ptgu[,toscale] <- data.frame(lapply(ptgu[,toscale], scale, center=T, scale=T))
+rm(toscale)
+
+# split data into training and validation cohorts
+# Set random seed to reproduce results
+set.seed(7)
+
+# create an index variable which will allow splitting of training/test data without overlap
+ptgu$index <- seq(1:nrow(ptgu))
+
+# Group by OSHPD_ID and cohort, then take a 75% sample for training set
+train <- ptgu %>%
+  group_by(cohort, oshpd_id) %>%
+  sample_frac(size=0.75, replace=F)
+
+# anything that didnt make it into training set is put into a test set
+test <- ptgu[!(ptgu$index %in% train$index),]
+
+# remove index variables
+ptgu <- ptgu %>% select(-index)
+train <- train %>% select(-index)
+test <- test %>% select(-index)
+```
+
+```{r observedrankings}
+# Calculate observed hospital level readmission rates and rankings, per cohort
+ranks <- test %>%
+  group_by(cohort, oshpd_id) %>%
+  summarise(
+    cases = n(),
+    p_obs = sum(isreadmit30dc)/n()
+  ) %>%
+  # filter(cases>4) %>%
+  mutate(
+    r_obs = 100*(1 - percent_rank(p_obs)))
+
+ranks <- test %>% 
+  group_by(oshpd_id) %>%
+  select(oshpd_id, safetydsh, safetynaph, safetydsh4, safetydsh10) %>%
+  distinct() %>%
+  right_join(ranks)
+
+ranks %>%
+  group_by("Cohort" = cohort) %>%
+  summarise(
+    "Number of Hospitals in Test Data" = n()
+  ) %>% kable()
+
+ranks %>%
+  group_by("Cohort" = cohort, "Safety Net Status" = safetydsh4) %>%
+  summarise(
+    "Number of Hospitals in Test Data" = n()
+  ) %>% kable()
+```
+
+# Combined Models
+
+- Base Model: Age, Sex, Elixhauser Sum
+- Base with SES: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
+- Base with SES + RU: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
+- Base with Hospital Factors: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
+- Base with Hospital Factors + SES: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
+- Base with Hospital Factors + SES + Rural: Age, Sex, Elixhauser Sum, Diez-Roux Score, Ethnicity
+
+P-values represent two sided Wilcoxon Rank Sum tests comparing rankings of predicted probabilites at the hospital level in non-SES models to models incoporating SES.
+
+```{r combinedmodels}
+results <- train %>%
+  group_by(cohort) %>%
+  do(
+    "p_base" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum, data=., family="binomial"),
+    "p_base_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + hoodzscore + ethwhite, data=., family="binomial"),
+    "p_base_sesru" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + hoodzscore + ethwhite + ru + km, data=., family="binomial"),
+    "p_hospfactors" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency, data=., family="binomial"),
+    "p_hospfactors_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + hoodzscore + ethwhite, data=., family="binomial"),
+    "p_hospfactors_sesru" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + volumequint + bedsMean + residency + hoodzscore + ethwhite + ru + km, data=., family="binomial")
+  )
+
+# Assign number of cohorts and number of models (for later use)
+numcohorts <- length(unique(test$cohort))
+nummodels <- ncol(results)-1
+```
+
+``` {r predictedprobs_combinedmodels}
+# Generate predicted probabilities for admission
+# index <- lapply(1:numcohorts, function(x) seq(numcohorts+x,(nummodels+1)*numcohorts, by=numcohorts))
+
+# results <- unlist(results)
+# results <- lapply(index, function(x) results[x])
+prednames <- colnames(results)[-1]
+results <- t(results)
+
+pred_cystectomy <- as.data.frame(lapply(2:nrow(results), function(x) predict(results[[x,1]], newdata=test[test$cohort=="Cystectomy",], type="response")))
+
+pred_partialnx <- as.data.frame(lapply(2:nrow(results), function(x) predict(results[[x,2]], newdata=test[test$cohort=="PartialNx",], type="response")))
+
+pred_radnx <- as.data.frame(lapply(2:nrow(results), function(x) predict(results[[x,3]], newdata=test[test$cohort=="RadNx",], type="response")))
+
+colnames(pred_cystectomy) <- prednames
+colnames(pred_partialnx) <- prednames
+colnames(pred_radnx) <- prednames
+
+pred_cystectomy <- cbind(test[test$cohort=="Cystectomy",], pred_cystectomy)
+pred_partialnx <- cbind(test[test$cohort=="PartialNx",], pred_partialnx)
+pred_radnx <- cbind(test[test$cohort=="RadNx",], pred_radnx)
+
+# names(pred_cystectomy) <- gsub("(^p_.+)([0-9])+", "\\1", names(pred_cystectomy))
+# names(pred_partialnx) <- gsub("(^p_.+)([0-9])+", "\\1", names(pred_partialnx))
+# names(pred_radnx) <- gsub("(^p_.+)([0-9])+", "\\1", names(pred_radnx))
+
+pred_all <- rbind(pred_cystectomy, pred_partialnx, pred_radnx)
+rm(pred_cystectomy, pred_partialnx, pred_radnx)
+
+# extract names of columns for predicted probabilities
+vars <- grep("p_", names(pred_all), value=T)
+# replace the "p_" with "r_" to start the name, use it in the mutate_each_() function
+vars_r <- setNames(vars, str_replace(vars, "p_", "r_"))
+
+# calculate assign cohort/hospital specific predicted probabilities, then rank by cohort
+pred <- pred_all %>%
+  group_by(cohort, oshpd_id) %>%
+  summarise_each(funs(mean), starts_with("p_")) %>%
+  group_by(cohort) %>%
+  mutate_each_(funs(100*(1-percent_rank(.))), vars_r) %>%
+  right_join(ranks)
+
+res_probs <- pred %>%
+  select(-safetynaph, -safetydsh, -safetydsh10, -cases, -oshpd_id) %>%
+  group_by(cohort, safetydsh4) %>%
+  summarise_each(funs(mean(., na.rm=T)))%>%
+  mutate_each(funs(.*100), matches("p_|pct_")) %>%
+  group_by(cohort, safetydsh4) %>%
+  mutate_each(funs(sprintf("%.2f", .)))%>% 
+  t() %>% as.data.frame()
+
+res_names <- paste(unlist(res_probs[1,]), unlist(res_probs[2,]))
+res_names <- str_replace_all(res_names, "FALSE", "Not SHN")
+res_names <- str_replace_all(res_names, "TRUE", "SHN")
+colnames(res_probs) <- res_names
+res_probs <- res_probs[3:nrow(res_probs),]
+rm(res_names)
+
+# arrange by row names (all model probabilities first, then rankings)
+res_probs <- res_probs[order(row.names(res_probs)),]
+
+kable(res_probs)
+```
+
+## Differences in Overall Rankings
+p-values from Two Sample Wilcoxon Signed Rank Test (Mann-Whitney), comparing predicted probabilities of readmission in each of the pairwise combinations of models. A significant p-value indicates that the hospital rankings, based on predicted probabilities generated by each model, are different from the comparator model. 
+All pairwise combinations are assessed for each cohort.
+
+```{r}
+# Rearrange columns to make p_obs first
+pred <- pred %>%
+  select(p_obs, starts_with("p_"), r_obs, starts_with("r_"), everything())
+
+combinations <- combn(grep("p_", names(pred), value=T),2, simplify = F)
+
+res_pairs_cystectomy <- lapply(seq_along(combinations), function (x) {
+  pred <- pred[pred$cohort=="Cystectomy",colnames(pred) %in% unlist(combinations[x])]
+  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
+  return(result)
+})
+
+res_pairs_partialnx <- lapply(seq_along(combinations), function (x) {
+  pred <- pred[pred$cohort=="PartialNx",colnames(pred) %in% unlist(combinations[x])]
+  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
+  return(result)
+})
+
+res_pairs_radnx <- lapply(seq_along(combinations), function (x) {
+  pred <- pred[pred$cohort=="RadNx",colnames(pred) %in% unlist(combinations[x])]
+  result <- wilcox.test(unlist(pred[,1]), unlist(pred[,2]), paired=T)
+  return(result)
+})
+
+# Rename list for legibility    
+names(res_pairs_cystectomy) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = " vs. ")
+
+names(res_pairs_partialnx) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = " vs. ")
+
+names(res_pairs_radnx) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = " vs. ")
+```
+
+### Cystectomy
+```{r}
+resPairsTable(res_pairs_cystectomy)
+```
+
+### Partial Nephrectomy
+```{r}
+resPairsTable(res_pairs_partialnx)
+```
+
+### Radical Nephrectomy
+```{r}
+resPairsTable(res_pairs_radnx)
+```
+
+## Changes in Expected Rankings
+### SHN vs Non-SHN
+
+Is the change in rank different between Safety Net and Non-Safety Net Hospitals?
+We calculated the change in rank based on predicted probabilities from each model, and performed all pairwise comparisons. No assumptions about the distribution in differences was made, and a permutation test was performed comparing SHN to non-SHN hospitals. 
+
+```{r}
+# generate all possible combinations of ranks
+combinations <- combn(grep("^r_", names(pred), value=T),2, simplify = F)
+
+perms <- lapply(unique(pred$cohort), comboDiffs)
+perms <- rbind_all(perms)
+
+perms <- cbind(perms, "safetydsh4" = factor(ifelse(pred$safetydsh4, "Yes", "No")))
+
+res_perm_cystectomy <- lapply(grep("^r_", colnames(perms)), function (x) {
+  independence_test(perms[perms$cohort=="Cystectomy",x] ~ safetydsh4, data=perms[perms$cohort=="Cystectomy",], ytrafo=rank_trafo, distribution=exact())
+})
+
+res_perm_partialnx <- lapply(grep("^r_", colnames(perms)), function (x) {
+  independence_test(perms[perms$cohort=="PartialNx",x] ~ safetydsh4, data=perms[perms$cohort=="PartialNx",], ytrafo=rank_trafo, distribution=exact())
+})
+
+res_perm_radnx <- lapply(grep("^r_", colnames(perms)), function (x) {
+  independence_test(perms[perms$cohort=="RadNx",x] ~ safetydsh4, data=perms[perms$cohort=="RadNx",], ytrafo=rank_trafo, distribution=exact())
+})
+
+names(res_perm_cystectomy) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+
+names(res_perm_partialnx) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+
+names(res_perm_radnx) <- paste(matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,1], matrix(unlist(combinations), ncol = 2, byrow = TRUE)[,2], sep = "_vs_")
+```
+
+### Cystectomy
+```{r}
+resPermsTable(res_perm_cystectomy, nummodels)
+```
+
+### Partial Nephrectomy
+```{r}
+resPermsTable(res_perm_partialnx, nummodels)
+```
+
+### Radical Nephrectomy
+```{r}
+resPermsTable(res_perm_radnx, nummodels)
+```
+
+
+```{r rankingfigs, eval=F}
+# 30d Readmissions for cystectomy by safety net status
+pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
+  ggplot(aes(x=reorder(oshpd_id, -p_obs), y=100*p_obs+.5, fill=safetydsh4)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="Observed 30 Day Readmission Rate for Cystectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
+  ggplot(aes(x=reorder(oshpd_id, -p_base), y=100*p_base+.5, fill=safetydsh4)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base Model)", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
+  ggplot(aes(x=reorder(oshpd_id, -p_base_ses), y=100*p_base_ses+.5, fill=safetydsh4)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base + SES)", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+pred %>% filter(cohort=="Cystectomy" & !is.na(safetydsh4)) %>%
+  ggplot(aes(x=reorder(oshpd_id, -p_base_sesru), y=100*p_base_sesru+.5, fill=safetydsh4)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="Predicted 30 Day Readmission Rate for Cystectomy by Safety Net Status (Base + SES + Rural)", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+# 30d Readmissions for Partial Nephrectomy by safety net status
+pred %>% filter(cohort=="PartialNx" & !is.na(safetydsh4)) %>%
+  ggplot(aes(x=reorder(oshpd_id, -p_base), y=100*p_base+.5, fill=safetydsh4)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="30 Day Readmission Rate for Partial Nephrectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+# 30d Readmissions for Radical Nephrectomy by safety net status
+pred %>% filter(cohort=="RadNx" & !is.na(safetydsh4)) %>%
+  ggplot(aes(x=reorder(oshpd_id, -p_base_ses), y=100*p_base_ses+.5, fill=safetydsh4)) +
+  geom_bar(stat="identity", width=0.7, position = position_dodge(width=0.2)) +
+  labs(title="30 Day Readmission Rate for Radical Nephrectomy by Safety Net Status", x=NULL, y="30 Day Readmission Rate (%)") +
+  scale_fill_brewer(palette = "Paired", name="Safety Net Status", labels=c("No", "Yes")) +
+  theme_few() + 
+  theme(axis.line.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+```
+
+```{r eval=F}
+ranks %>%
+  filter(cohort=="Cystectomy") %>%
+  filter(safetydsh==T) %>%
+  select(oshpd_id, r_obs, r_base, r_base_ses) %>%
+  arrange(desc(r_base_ses)) %>%
+  write.csv("temp.csv")
+```
