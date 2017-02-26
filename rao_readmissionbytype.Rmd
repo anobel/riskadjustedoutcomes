@@ -1,0 +1,457 @@
+---
+title: "Readmissions by Hospital Type"
+subtitle: "SNH vs. Non-SNH vs. Kaiser"
+author: "Anobel Y. Odisho, Ruth Etzioni, David F. Penson, John L. Gore"
+date: "`r Sys.Date()`"
+output: 
+  tufterhandout::html_tufte_handout:
+        theme: cosmo
+        css: floating.css
+        toc: no
+params:
+    cohort: ""
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, fig.width = 12, cache = F)
+```
+
+<!--- this inline CSS style is to alter horizontal table padding for stargazer tables -->
+<style>
+  td {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+</style>
+  
+```{r packages, cache=F}
+# Data Cleaning Packages
+library(lubridate)
+library(plyr)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(broom)
+
+# Graphics Packages
+library(DT)
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+library(RColorBrewer)
+library(stargazer)
+```
+
+```{r constants.functions}
+bg <- "#FCFCFA"
+main1 <- "#ca0020"
+acc1 <- "#f4a582"
+main2 <- "#0571b0"
+acc2 <- "#92c5de"
+
+# this function takes arguments x=value, y=number of sig figs, prints mean +/- SD in html
+prettyMeanSD <- function (x,y) {
+  mean <- prettyNum(round(mean(x, na.rm=TRUE),y), big.mark = ",")
+  sd <-  prettyNum(round(sd(x, na.rm=TRUE),y), big.mark = ",")
+  paste(mean, " &plusmn; ",sd,sep="")
+}
+
+prettyMedianIQR <- function (x,y) {
+  median <- prettyNum(round(median(x, na.rm=TRUE),y), big.mark = ",")
+  tiles <- round(quantile(x, c(.25, .75), na.rm=TRUE),y)
+  paste(median, " (",tiles[1], " - ", tiles[2], ")",sep="")
+}
+```
+
+```{r loaddata, cache=F}
+# Load full dataset (12.5m obs)
+# when loading the full data set, in chunk options set cache.lazy=F
+# pt <- readRDS(file="rao_workingdata/pt.rds")
+ptgu <- readRDS("data/patient/tidy/ptgu.rds")
+
+# Drop RP and RPLND
+ptgu <- ptgu %>% 
+  filter(cohort %in% c("Cystectomy", "PartialNx", "RadNx", "RP"))
+
+# List variables that will be scaled for models
+# toscale <- c("agyradmcentered", 
+#              "elixsum", 
+#              "bedsMean", "adcMean", "dsh_pctMean", "mcr_pctMean", "cmiMean",
+#              "ethwhite", "ethblack", "ethlatin", "ethasian", "ethother",
+#              "medianincome", "capincome", "housevalue",
+#              "edunohs",	"eduhs", "educollege", "empexec",
+#              "gini", "iceinc", "iceedu", "iceeth", "hoodzscore", 
+#              "km", "hours", 
+#              "los", "cohortmortality", "residentnum")
+
+# scale and center variables
+# ptgu[,toscale] <- data.frame(lapply(ptgu[,toscale], scale, center=T, scale=T))
+# rm(toscale)
+
+# make a disease specific cohort based on the parameter selected
+# params <- list(); params$cohort="Cystectomy"
+# ptgucohort <- ptgu %>% 
+#   filter(!is.na(patzcta)) %>%
+#   filter(cohort==params$cohort)
+```
+
+```{r assignhospitalstatus}
+# Assign hospital type
+ptgu$hosptype <- "Non-SNH"
+ptgu$hosptype[grepl("KAISER", ptgu$fac_name)] <- "KP"
+ptgu$hosptype[ptgu$safetydsh] <- "SNH"
+
+ptgu$hosptype <- factor(ptgu$hosptype, levels=c("Non-SNH", "SNH", "KP"))
+```
+
+# Overall Summary
+- Total patients in cohort: `r nrow(ptgu)`
+
+```{r descriptivetables, results= 'asis'}
+kable(t(table(ptgu$cohort)),
+      caption = "Number of patients by cohort")
+
+ggplot(ptgu, aes(cohort)) +
+  geom_bar(aes(y = ..count..), fill=acc2) +
+  theme_few() +
+  theme(plot.background = element_rect(fill=bg), legend.background = element_rect(fill=bg))
+
+kable(t(table(ptgu$hosptype)), 
+      caption = "Number of patients by Hospital Type")
+
+ggplot(ptgu, aes(hosptype)) + 
+  geom_bar(aes(y = ..count..), fill=acc2) +
+  theme_few() + 
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+kable(t(table(ptgu$hosptype, ptgu$cohort)),
+      caption = "Number of patients in each cohort by hospital type")
+
+ggplot(ptgu, aes(cohort)) + 
+  geom_bar(aes(y = ..count.., fill = hosptype), position = "dodge") +
+  theme_few() + 
+  scale_fill_brewer(palette = "Paired") + 
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+kable(prop.table(table(ptgu$cohort, ptgu$hosptype), 1)*100, digits = 2,
+     caption = "Proportion of patients in each cohort by hospital type")
+
+kable(prop.table(table(ptgu$hosptype, ptgu$isreadmit30dc),1)*100, digits = 2,
+      caption = "30d readmission rate by hospital type")
+# make stacked bar chart
+t <- data.frame(prop.table(table(ptgu$hosptype, ptgu$isreadmit30dc),1)*100)
+colnames(t) <- c("HospitalType", "Readmission", "Freq")
+t %>% ggplot(aes(x=HospitalType, fill = Readmission)) + 
+  geom_bar(aes(y = Freq), stat = "identity") + 
+  theme_few() + 
+  scale_fill_brewer(palette = "Paired") + 
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+  
+# readmission rate by hospital type and cohort
+ptgu %>%
+  group_by(cohort, hosptype) %>%
+  summarise(
+    "30 Day Readmission Rate" = sprintf("% .2f%%", 100*sum(isreadmit30dc)/n()),
+    "90 Day Readmission Rate" = sprintf("% .2f%%", 100*sum(isreadmit90dc)/n())
+  ) %>% 
+  kable(digits = 2, caption = "30d Readmission Rate within each cohort by hospital type")
+
+
+ptgu %>%
+  group_by(cohort, hosptype) %>%
+  summarise(
+    ,
+    "90 Day Readmissions" = sprintf("% .2f%%", 100*sum(isreadmit90dc)/n())
+  ) %>% 
+  kable(digits = 2, caption = "30d Readmission Rate within each cohort by hospital type")
+
+ptgu %>%
+  group_by(cohort, hosptype) %>%
+  summarise(
+    "Readmission_30day" = 100*sum(isreadmit30dc)/n()
+    ) %>%
+  ggplot(aes(x=hosptype, fill = cohort)) + 
+  geom_bar(aes(y = Readmission_30day), stat = "identity") + 
+  theme_few() + 
+  scale_fill_brewer(palette = "Paired") + 
+  theme(plot.background = element_rect(fill=bg), legend.background= element_rect(fill=bg))
+
+ptgu %>%
+  group_by(cohort) %>%
+  do(
+    p.value.30day = chisq.test(.$isreadmit30dc, .$hosptype)$p.value,
+    p.value.90day = chisq.test(.$isreadmit90dc, .$hosptype)$p.value
+    ) %>%
+  kable()
+
+```
+
+# Univariate Analyses
+
+## Table 1
+```{r table1}
+t1 <- ptgu %>%
+  group_by(cohort) %>%
+  dplyr::summarise(
+    "Cases" = prettyNum(n(), big.mark=","),
+    "Hospitals" = prettyNum(n_distinct(oshpd_id), big.mark=","),
+    "Age (Median, IQR)" = prettyMedianIQR(agyradm,0),
+    "Sex (% Male)" = sprintf("%.1f", 100*sum(sex=="Male")/n()),
+    "Approach - Open (%)" = sprintf("%.1f", 100*sum(open, na.rm=T)/n()),
+    "In-Hospital Mortality (%)" = sprintf("%.1f", mean(cohortmortality, na.rm=T)),
+    "30d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit30dc)/n()),
+    "90d Readmission Rate (%)" = sprintf("%.1f", 100*sum(isreadmit90dc)/n()),
+    "Elixhauser Sum" = prettyMeanSD(elixsum,1),
+    "Diez-Roux Score" = prettyMedianIQR(hoodzscore,2),
+    "Ethnicity: % White" = prettyMedianIQR(ethwhite, 1),
+    "Ethnicity: % Black" = prettyMedianIQR(ethblack,1),
+    "Ethnicity: % Hispanic" = prettyMedianIQR(ethlatin,1),
+    "Ethnicity: % Asian" = prettyMedianIQR(ethasian,1),
+    "Rural (Patient) (%)" = sprintf("%.1f", 100*sum(ru=="Rural", na.rm=T)/n()),
+    "Distance to Hospital (km)" = prettyMedianIQR(km,0),
+    "Safety Net - DSH (%)" = sprintf("%.1f", 100*sum(safetydsh4, na.rm=T)/n())
+  ) %>%
+  t()%>% as.data.frame(stringsAsFactors=F) 
+colnames(t1) <- t1[1,]
+t1 <- t1[-1,]
+
+t1p <- data.frame("Pvalue"=matrix(nrow=nrow(t1), ncol=1), row.names=rownames(t1))
+
+t1p["Approach - Open (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$open)$p.value,
+  eps=.001, digits=3)
+
+t1p["In-Hospital Mortality (%)",1] <- format.pval(
+  summary(aov(cohortmortality ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["30d Readmission Rate (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$isreadmit30dc)$p.value,
+  eps=.001, digits=3)
+
+t1p["90d Readmission Rate (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$isreadmit90dc)$p.value,
+  eps=.001, digits=3)
+
+t1p["Elixhauser Sum",1] <- format.pval(
+  summary(aov(elixsum ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Diez-Roux Score",1] <- format.pval(
+  summary(aov(hoodzscore ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % White",1] <- format.pval(
+  summary(aov(ethwhite ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % Black",1] <- format.pval(
+  summary(aov(ethblack ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % Hispanic",1] <- format.pval(
+  summary(aov(ethlatin ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % Asian",1] <- format.pval(
+  summary(aov(ethasian ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Ethnicity: % Black",1] <- format.pval(
+  summary(aov(ethblack ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Rural (Patient) (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$ru)$p.value,
+  eps=.001, digits=3)
+
+t1p["Distance to Hospital (km)",1] <- format.pval(
+  summary(aov(km ~ cohort, data=ptgu))[[1]][1,5],
+  eps=.001, digits=3)
+
+t1p["Safety Net - DSH (%)",1] <- format.pval(
+  chisq.test(ptgu$cohort, ptgu$safetydsh4)$p.value,
+  eps=.001, digits=3)
+
+t1p[is.na(t1p)] <- ""
+t1f <- cbind(t1, t1p)
+
+kable(t1f)
+```
+
+## Table 2
+```{r table2}
+t2 <- ptgu %>%
+  group_by(cohort, hosptype) %>%
+  dplyr::summarise(
+    "Age (Median, IQR)" = prettyMedianIQR(agyradm,0),
+    "Sex (% Male)" = sprintf("%.1f", 100*sum(sex == "Male")/n()),
+    "Approach - Open (%)" = sprintf("%.1f", 100*sum(open, na.rm=T)/n()),
+    "Elixhauser Sum" = prettyMeanSD(elixsum,1),
+    "Diez-Roux Score" = prettyMedianIQR(hoodzscore,2),
+    "Ethnicity: % White" = prettyMedianIQR(ethwhite, 1),
+    "Rural (Patient) (%)" = sprintf("%.1f", 100*sum(ru == "Rural", na.rm = T)/n()),
+    "Distance to Hospital (km)" = prettyMedianIQR(km,0)
+  ) %>%
+  t() %>% as.data.frame(stringsAsFactors = F)
+
+# Reassign column names, format
+t2names <- colnames(t2)
+t2names <- paste(t2[1,], str_trim(t2[2,]))
+
+colnames(t2) <- t2names
+t2 <- t2[3:nrow(t2),]
+rm(t2names)
+
+# calculate univariate significance tests
+t2p <- ptgu %>%
+  filter(cohort %in% c("Cystectomy", "PartialNx", "RadNx")) %>%
+  group_by(cohort) %>%
+  do(
+    "Age (Median, IQR)" = summary(aov(.$agyradm ~ .$hosptype))[[1]][[1,5]],
+    "Sex (% Male)" = chisq.test(.$sex, .$hosptype)$p.value,
+    "Approach (% Open)" = chisq.test(.$open, .$hosptype)$p.value,
+    "Elixhauser Sum" = summary(aov(.$elixsum ~ .$hosptype))[[1]][[1,5]],
+    "Diez-Roux Score" = summary(aov(.$hoodzscore ~ .$hosptype))[[1]][[1,5]],
+    "Ethnicity: % White" = summary(aov(.$ethwhite ~ .$hosptype))[[1]][[1,5]],
+    "Rural (Patient) (%)" = chisq.test(.$ru, .$hosptype)$p.value,
+    "Distance to Hospital (km)" = summary(aov(.$km ~ .$hosptype))[[1]][[1,5]]
+    ) %>% t() %>% as.data.frame()
+
+t2pcols <- unlist(t2p[1,])
+t2prows <- rownames(t2p)[-1]
+t2p <- as.data.frame(matrix(unlist(t2p), nrow=nrow(t2p)), stringsAsFactors = F)
+t2p <- t2p[-1,]
+
+t2p <- as.data.frame(lapply(t2p, as.numeric))
+
+t2p <- as.data.frame(lapply(t2p, format.pval, eps = 0.001, digits = 2), stringsAsFactors = F)
+
+colnames(t2p) <- paste0(t2pcols, " xp-value")
+t2p$id <- t2prows
+
+t2$id <- row.names(t2)
+t2f <- left_join(t2, t2p)
+t2f[is.na(t2f)] <- ""
+
+rownames(t2f) <- t2f$id
+t2f$id <- NULL
+
+t2f <- t2f[(sort(colnames(t2f)))]
+
+colnames(t2f) <- gsub("x", "", colnames(t2f))
+kable(t2f)
+```
+
+```{r miscdatafigs}
+
+# this is a nice table focusing on hood zscores between cohorts and hosp types
+# TODO: make this a chart
+ptgu %>%
+  group_by(cohort, hosptype) %>%
+  summarise("Neighborhood Score, Median (IQR)" = prettyMedianIQR(hoodzscore, 2)) %>%
+  kable()
+
+```
+
+# Multivariate Models
+Outcome: 30 day readmission
+
+```{r readmissionmodels30, results="asis"}
+results30 <- ptgu %>%
+  filter(cohort!="RP") %>%
+  group_by(cohort) %>%
+  do(
+    "unadj" = glm(isreadmit30dc ~ hosptype, data=., family="binomial"),
+    "base" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + hosptype, data=., family = "binomial"),
+    "base_ses" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + hoodzscore + ethwhite + hosptype, data=., family = "binomial"),
+    "base_sesru" = glm(isreadmit30dc ~ agyradm + sex + open + elixsum + hoodzscore + ethwhite + km + ru + hosptype, data=., family = "binomial")
+  )
+
+results30rp <- ptgu %>%
+  filter(cohort == "RP") %>%
+  group_by(cohort) %>%
+  do(
+    "unadj" = glm(isreadmit30dc ~ hosptype, data=., family="binomial"),
+    "base" = glm(isreadmit30dc ~ agyradm + open + elixsum + hosptype, data=., family = "binomial"),
+    "base_ses" = glm(isreadmit30dc ~ agyradm + open + elixsum + hoodzscore + ethwhite + hosptype, data=., family = "binomial"),
+    "base_sesru" = glm(isreadmit30dc ~ agyradm + open + elixsum + hoodzscore + ethwhite + km + ru + hosptype, data=., family = "binomial")
+  )
+
+results30 <- rbind(results30, results30rp)
+rm(results30rp)
+```
+
+## Unadjusted
+```{r 30d_unadj}
+results30 %>%
+  tidy(unadj, conf.int = T) %>%
+  filter(term != "(Intercept)") %>%
+  select(-std.error, -statistic) %>%
+  mutate(estimate = sprintf("%.2f", exp(estimate)),
+         conf.low = sprintf("%.2f", exp(conf.low)),
+         conf.high = sprintf("%.2f", exp(conf.high)),
+         p.value = format.pval(p.value, eps = 0.01, digits = 2),
+         CI = paste(conf.low, " - ", conf.high)) %>%
+  select(cohort, term, estimate, CI, p.value) %>%
+  kable(caption = "Unadjusted", digits = 2,
+        col.names = c("Cohort", "Term", "Odds Ratio", "95% CI", "p value"))
+
+```
+
+## Base HRRP
+```{r 30d_base}
+results30 %>%
+  tidy(base, conf.int = T) %>%
+  filter(term != "(Intercept)") %>%
+  select(-std.error, -statistic) %>%
+  mutate(estimate = sprintf("%.2f", exp(estimate)),
+         conf.low = sprintf("%.2f", exp(conf.low)),
+         conf.high = sprintf("%.2f", exp(conf.high)),
+         p.value = format.pval(p.value, eps = 0.01, digits = 2),
+         CI = paste(conf.low, " - ", conf.high)) %>%
+  select(cohort, term, estimate, CI, p.value) %>%
+  kable(caption = "Base Model", digits = 2,
+        col.names = c("Cohort", "Term", "Odds Ratio", "95% CI", "p value"))
+```
+
+## Base + SES
+```{r 30d_baseses}
+results30 %>%
+  tidy(base_ses, conf.int = T) %>%
+  filter(term != "(Intercept)") %>%
+  select(-std.error, -statistic) %>%
+  mutate(estimate = sprintf("%.2f", exp(estimate)),
+         conf.low = sprintf("%.2f", exp(conf.low)),
+         conf.high = sprintf("%.2f", exp(conf.high)),
+         p.value = format.pval(p.value, eps = 0.01, digits = 2),
+         CI = paste(conf.low, " - ", conf.high)) %>%
+  select(cohort, term, estimate, CI, p.value) %>%
+  kable(caption = "Base + SES", digits = 2,
+        col.names = c("Cohort", "Term", "Odds Ratio", "95% CI", "p value"))
+```
+
+## Base + SES, Rural
+```{r 30d_basesesru}
+results30 %>%
+  tidy(base_sesru, conf.int = T) %>%
+  filter(term != "(Intercept)") %>%
+  select(-std.error, -statistic) %>%
+  mutate(estimate = sprintf("%.2f", exp(estimate)),
+         conf.low = sprintf("%.2f", exp(conf.low)),
+         conf.high = sprintf("%.2f", exp(conf.high)),
+         p.value = format.pval(p.value, eps = 0.01, digits = 2),
+         CI = paste(conf.low, " - ", conf.high)) %>%
+  select(cohort, term, estimate, CI, p.value) %>%
+  kable(caption = "Base + SES + Rural", digits = 2,
+        col.names = c("Cohort", "Term", "Odds Ratio", "95% CI", "p value"))
+
+```
+
+```{r}
+ptgu %>%
+  group_by(cohort) %>%
+  summarise(sum(isreadmit30dc)) %>%
+  kable()
+
+```
