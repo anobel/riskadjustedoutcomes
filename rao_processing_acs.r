@@ -5,7 +5,7 @@ library(dplyr)
 
 # To use the ACS package to directly download ACS data, need to sign up for API key and install it (once)
 
-# api.key <- "d5481ffa6d9e8cb41a08e565fbd4d6baa46cf350"  # ENTER YOUR OWN API KEY HERE
+# api.key <- "####"  # ENTER YOUR OWN API KEY HERE
 # api.key.install(api.key)
 
 # Import ZIP/ZCTA crosswalk (tidy)
